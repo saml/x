@@ -5,3 +5,4 @@ target/
 *.class
 build/
 node_modules/
+venv/
