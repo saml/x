@@ -9,12 +9,12 @@ sub vcl_deliver {
 }
 
 sub vcl_log {
-  log {"syslog 7c8d3Wi3OpxNiRk5PkRF8A syslog :: "} {"""} regsuball(fastly_info.state,{"""},{"\""}) {"""} "," obj.hits "," {"""} regsuball(obj.lastuse,{"""},{"\""}) {"""} "," resp.body_bytes_written "," time.elapsed "," geoip.latitude "," geoip.longitude "," {"""} regsuball(geoip.city,{"""},{"\""}) {"""} "," {"""} regsuball(geoip.country_name,{"""},{"\""}) {"""} "," geoip.postal_code "," {"""} regsuball(geoip.region,{"""},{"\""}) {"""} "," {"""} regsuball(client.ip,{"""},{"\""}) {"""} "," req.http.X-FastlySessionID "," resp.status "," req.request "," {"""} regsuball(req.url,{"""},{"\""}) {"""} "," {"""} regsuball(req.http.Referer,{"""},{"\""}) {"""} "," {"""} regsuball(req.http.User-Agent,{"""},{"\""}) {"""}
+  log {"syslog 7c8d3Wi3OpxNiRk5PkRF8A syslog :: "} {"""} regsuball(fastly_info.state, {"""}, {"\""}) {"""} {","} obj.hits {","} obj.lastuse {","} resp.body_bytes_written {","} time.elapsed {","} geoip.latitude {","} geoip.longitude {","} {"""} regsuball(geoip.city, {"""}, {"\""}) {"""} {","} {"""} regsuball(geoip.country_name, {"""}, {"\""}) {"""} {","} geoip.postal_code {","} {"""} regsuball(geoip.region, {"""}, {"\""}) {"""} {","} {"""} regsuball(client.ip, {"""}, {"\""}) {"""} {","} {"""} regsuball(req.http.X-FastlySessionID, {"""}, {"\""}) {"""} {","} resp.status {","} req.request {","} {"""} regsuball(req.url, {"""}, {"\""}) {"""} {","} {"""} regsuball(req.http.Referer, {"""}, {"\""}) {"""} {","} {"""} regsuball(req.http.User-Agent, {"""}, {"\""}) {"""};
 }
 
 sub vcl_recv {
-  set req.http.X-FastlySessionID = regsub(req.http.Cookie, "^.*[; ]?fastlysid=([0-9a-z]+)[; ]?.*$", "\1");
-  if (req.http.X-FastlySessionID ~ "[0-9a-z]+") {
+  set req.http.X-FastlySessionID = regsub(req.http.Cookie, "^.*(?:; )?fastlysid=([0-9a-z]+)(?:; )?.*$", "\1");
+  if (req.http.X-FastlySessionID ~ "^[0-9a-z]+$") {
     set req.http.Tmp-Set-Cookie = req.http.Cookie;
   } else {
     set req.http.X-FastlySessionID = digest.hash_md5(now randomstr(32) client.ip);
