@@ -21,7 +21,7 @@ func (c *Client) processMessages(done chan struct{}) {
 			log.Fatal(err)
 		}
 
-		log.Printf("> %s [%s] @%s: %s", msg.Type, msg.ChannelID, c.userName(msg.UserID), msg.Text)
+		log.Printf("> %s [%s] @%s: %s", msg.Type, c.channelName(msg.ChannelID), c.userName(msg.UserID), msg.Text)
 	}
 }
 
@@ -29,6 +29,14 @@ func (c *Client) userName(userID string) string {
 	name, ok := c.userNames[userID]
 	if !ok {
 		return userID
+	}
+	return name
+}
+
+func (c *Client) channelName(channelID string) string {
+	name, ok := c.channelNames[channelID]
+	if !ok {
+		return channelID
 	}
 	return name
 }

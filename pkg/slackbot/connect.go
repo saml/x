@@ -27,13 +27,26 @@ type slackUser struct {
 	Name string `json:"name"`
 }
 
+type slackChannel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type slackPrivateMessage struct {
+	ID     string `json:"id"`
+	UserID string `json:"user"`
+}
+
 // Client is slack bot client.
 type Client struct {
-	WebSocketURL string      `json:"url"`
-	Users        []slackUser `json:"users"`
-	Bots         []slackUser `json:"bots"`
+	WebSocketURL string                `json:"url"`
+	Users        []slackUser           `json:"users"`
+	Bots         []slackUser           `json:"bots"`
+	Channels     []slackChannel        `json:"channels"`
+	PMs          []slackPrivateMessage `json:"ims"`
 	conn         *websocket.Conn
 	userNames    map[string]string
+	channelNames map[string]string
 }
 
 // New creates new bot.
@@ -65,6 +78,14 @@ func New(token string) (*Client, error) {
 	}
 	for _, user := range client.Bots {
 		client.userNames[user.ID] = user.Name
+	}
+
+	client.channelNames = make(map[string]string)
+	for _, channel := range client.Channels {
+		client.channelNames[channel.ID] = channel.Name
+	}
+	for _, channel := range client.PMs {
+		client.channelNames[channel.ID] = client.userName(channel.UserID) // client.userName() only works after initializing userNames
 	}
 
 	return &client, nil
