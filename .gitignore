@@ -6,3 +6,6 @@ target/
 build/
 node_modules/
 venv/
+vendor/
+bin/
+\.*
