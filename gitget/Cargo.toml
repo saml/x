@@ -1,0 +1,8 @@
+[package]
+name = "gitget"
+version = "0.0.0"
+authors = ["saml"]
+
+[dependencies]
+regex = "0.1.69"
+lazy_static = "0.2.1"
