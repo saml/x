@@ -31,21 +31,20 @@ fn env_flag(env_var: &str, flag: Option<String>) -> Option<String> {
     }
 }
 
-
+fn as_gitpath(s: &str) -> &str {
+    s.trim_right_matches(".git").trim_left_matches("/")
+}
 
 fn git_url_to_path(url: &str) -> Option<String> {
     lazy_static! {
         static ref GIT_URL: Regex = Regex::new(r"(?:.+@)?([^@:/]+):?(?:\d+)?([^:]+)$").unwrap();
     }
 
-    match GIT_URL.captures(url) {
-        Some(cap) => {
-            Some(format!("{}/{}",
-                         cap.at(1).unwrap(),
-                         cap.at(2).unwrap().trim_right_matches(".git").trim_left_matches("/")))
-        }
-        None => None,
-    }
+    GIT_URL.captures(url).and_then(|cap| 
+        cap.at(1).and_then(|x|
+            cap.at(2).map(|y| format!("{}/{}", x, as_gitpath(y))) 
+        )
+    )
 }
 
 fn main() {
