@@ -40,11 +40,10 @@ fn git_url_to_path(url: &str) -> Option<String> {
         static ref GIT_URL: Regex = Regex::new(r"(?:.+@)?([^@:/]+):?(?:\d+)?([^:]+)$").unwrap();
     }
 
-    GIT_URL.captures(url).and_then(|cap| 
-        cap.at(1).and_then(|x|
-            cap.at(2).map(|y| format!("{}/{}", x, as_gitpath(y))) 
-        )
-    )
+    GIT_URL.captures(url).and_then(|cap| match (cap.at(1), cap.at(2)) {
+        (Some(host), Some(path)) => Some(format!("{}/{}", host, as_gitpath(path))),
+        _ => None,
+    })
 }
 
 fn main() {
