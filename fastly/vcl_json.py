@@ -62,7 +62,7 @@ LogObject = Object({
 
 VCLTemplate = '''
 sub vcl_deliver {
-  if (req.http.Tmp-Set-Cookie) {
+  if (req.http.Tmp-Set-Cookie != "") {
     set resp.http.Set-Cookie = req.http.Tmp-Set-Cookie;
   } 
   set resp.http.X-FastlySessionID = req.http.X-FastlySessionID;
@@ -77,7 +77,7 @@ sub vcl_log {
 sub vcl_recv {
   set req.http.X-ClientID = req.http.Cookie:clientid;
   set req.http.X-FastlySessionID = req.http.Cookie:fastlysid;
-  if (req.http.X-FastlySessionID ~ "^[0-9a-z]+$") {
+  if (req.http.X-FastlySessionID != "") {
     set req.http.Tmp-Set-Cookie = "";
   } else {
     set req.http.X-FastlySessionID = digest.hash_md5(now randomstr(32) client.ip);
@@ -97,3 +97,4 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
+
