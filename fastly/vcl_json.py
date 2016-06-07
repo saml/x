@@ -39,19 +39,22 @@ LogObject = Object({
         'LastUse': Number('obj.lastuse'),
     }),
     'Bytes': Number('resp.body_bytes_written'),
+    'T': String('time.start'),
     'Elapsed': Number('time.elapsed'),
     'Geo': Object({
         'Lat': Number('geoip.latitude'),
         'Long': Number('geoip.longitude'),
         'City': String('geoip.city', True),
         'Country': String('geoip.country_name', True),
-        'Postal': String('geoip.postal_code', False),
+        'Postal': String('geoip.postal_code'),
         'Region': String('geoip.region', True),
     }),
-    'IP': String('client.ip', True),
-    'Session': String('req.http.X-FastlySessionID', True),
+    'IP': String('client.ip'),
+    'Session': String('req.http.X-FastlySessionID'),
+    'ClientID': String('req.http.X-ClientID'),
     'Status': Number('resp.status'),
-    'Method': String('req.request', False),
+    'Method': String('req.request'),
+    'Host': String('req.http.Host'),
     'Path': String('req.url', True),
     'Referrer': String('req.http.Referer', True),
     'UA': String('req.http.User-Agent', True),
@@ -72,14 +75,14 @@ sub vcl_log {
 }
 
 sub vcl_recv {
-  set req.http.X-FastlySessionID = regsub(req.http.Cookie, "^.*(?:; )?fastlysid=([0-9a-z]+)(?:; )?.*$", "\\1");
+  set req.http.X-ClientID = req.http.Cookie:clientid;
+  set req.http.X-FastlySessionID = req.http.Cookie:fastlysid;
   if (req.http.X-FastlySessionID ~ "^[0-9a-z]+$") {
-    set req.http.Tmp-Set-Cookie = req.http.Cookie;
+    set req.http.Tmp-Set-Cookie = "";
   } else {
     set req.http.X-FastlySessionID = digest.hash_md5(now randomstr(32) client.ip);
-    set req.http.Tmp-Set-Cookie = if(req.http.Cookie, req.http.Cookie "; ", "")  "fastlysid="  req.http.X-FastlySessionID  "; Expires="  time.add(now, 87600h);
+    set req.http.Tmp-Set-Cookie = "fastlysid=" + req.http.X-FastlySessionID + "; Expires=" + time.add(now, 87600h);
   }
-  unset req.http.Cookie;
  
 #FASTLY recv
 }
