@@ -1,3 +1,10 @@
+'''
+pip install selenium
+install: https://github.com/mozilla/geckodriver
+rename the geckodriver binary to wires in PATH
+
+xvfb-run venv/bin/python screenshot.py <url>
+'''
 
 import argparse
 import os
@@ -5,7 +12,6 @@ import os
 import selenium.webdriver
 from selenium.webdriver import firefox
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-#from selenium.webdriver.firefox.options import Options
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
