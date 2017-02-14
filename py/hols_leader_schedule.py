@@ -25,7 +25,9 @@ if __name__ == '__main__':
 
     with open(args.csv, 'r') as f:
         r = csv.reader(f)
-        year = int(next(r)[0], 10)
+        year_row = next(r)
+        year = int(year_row[0], 10)
+        comments = year_row[-1]
         month = int(next(r)[0])
         days = next(r)[:7]
         for row in r:
@@ -36,3 +38,4 @@ if __name__ == '__main__':
             for i, names in enumerate(names_row):
                 if names:
                     print('{} {}-{:02d}-{:02d} {}'.format(days[i], year, month, day_of_month[i], names.replace('\n', ' ')))
+        print(comments)
