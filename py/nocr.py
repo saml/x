@@ -7,6 +7,20 @@ import datetime
 
 Item = namedtuple('Item', ['name', 'file'])
 
+class Book:
+    def __init__(self, number, title=None):
+        self.title = title
+        self.number = number
+        self.nav_page = None
+        self.chapters = []
+
+class TheBook:
+    def __init__(self, title, uid=None):
+        self.title = title
+        self.uid = uid if uid is not None else uuid.uuid1().urn
+        self.books = []
+        self.chapters = []
+
 CONTAINER_XML = '''<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
    <rootfiles>
@@ -16,30 +30,17 @@ CONTAINER_XML = '''<?xml version="1.0"?>
 '''
 
 STYLESHEET = '''
-@font-face { font-family: "hangul"; src: url(res:///system/media/sdcard/fonts/NanumGothicBold.ttf); }
-body { margin: 5%; text-align: justify; font-size: medium; font-family: "hangul"; }
-code { font-family: monospace; }
-h1 { text-align: left; }
-h2 { text-align: left; }
-h3 { text-align: left; }
-h4 { text-align: left; }
-h5 { text-align: left; }
-h6 { text-align: left; }
-h1.title { }
-h2.author { }
-h3.date { }
-ol.toc { padding: 0; margin-left: 1em; }
-ol.toc li { list-style-type: none; margin: 0; padding: 0; }
-a.footnoteRef { vertical-align: super; }
-em, em em em, em em em em em { font-style: italic;}
-em em, em em em em { font-style: normal; }
+@font-face { font-family: "hangul"; src: url("./NanumBarunGothic.otf"); }
+body { margin: 5%; font-size: medium; font-family: "hangul"; }
+p { line-height: 1.4; }
+ol.toc li { list-style-type: none; padding: 0.5em; }
 '''
 
 
 def as_chapter_xhtml(title, body):
     return '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta http-equiv="Content-Style-Type" content="text/css" />
@@ -123,36 +124,42 @@ if __name__ == '__main__':
     conn = sqlite3.connect(args.db)
     c = conn.cursor()
 
-    title_page = Item(args.title, 'title_page.xhtml')
-    current_book = None
-    chapter_files = []
-    book_files = []
-    all_filenames = [title_page.file]
-    book_index = 0
+    all_books = []
+    current_book = Book(len(all_books))
+
     uid = uuid.uuid1().urn
-    thebook = {}
     with zipfile.ZipFile(args.out, 'w') as f:
         for book, chapter, text in c.execute('SELECT book,chapter,text FROM chapters'):
+            if current_book.title is None:
+                current_book.title = book
+            if current_book.title != book:
+                book_nav = '{}.xhtml'.format(current_book.number)
+                current_book.nav_page = Item(current_book.title, book_nav)
+                all_books.append(current_book)
+                f.writestr(book_nav, as_book_toc(current_book.title, current_book.chapters))
+                current_book = Book(len(all_books), book)
             title = '{} - {}'.format(book, chapter)
             body = '<p>{}</p>'.format(text)
             xhtml = as_chapter_xhtml(title, body)
-            xhtml_name = '{}_{}.xhtml'.format(book_index, chapter)
-            chapter_files.append(Item(chapter, xhtml_name))
-            all_filenames.append(xhtml_name)
+            xhtml_name = '{}_{}.xhtml'.format(current_book.number, chapter)
+            current_book.chapters.append(Item(chapter, xhtml_name))
             f.writestr(xhtml_name, xhtml)
-            if current_book != book:
-                book_nav = '{}.xhtml'.format(book_index)
-                all_filenames.append(book_nav)
-                book_files.append(Item(book, book_nav))
-                f.writestr(book_nav, as_book_toc(book, chapter_files))
-                book_index += 1
-                current_book = book
-                chapter_files = []
-        f.writestr(title_page.file, as_chapter_xhtml(args.title, '<h1>{}</h1>'.format(args.title)))
+
+        book_nav = '{}.xhtml'.format(current_book.number)
+        current_book.nav_page = Item(current_book.title, book_nav)
+        all_books.append(current_book)
+        f.writestr(book_nav, as_book_toc(current_book.title, current_book.chapters))
+            
+        f.write('NanumBarunGothic.otf')
         f.writestr('mimetype', 'application/epub+zip')
         f.writestr('META-INF/container.xml', CONTAINER_XML)
-        f.writestr('toc.ncx', as_toc_ncx(uid, args.title, [title_page] + book_files))
+        nav_pages = [book.nav_page for book in all_books]
+        f.writestr('toc.ncx', as_toc_ncx(uid, args.title, nav_pages))
+        all_filenames = []
+        for book in all_books:
+            all_filenames.append(book.nav_page.file)
+            all_filenames.extend(x.file for x in book.chapters)
         f.writestr('content.opf', as_content_opf(uid, args.title, all_filenames))
-        f.writestr('nav.xhtml', as_book_toc(args.title, book_files))
+        f.writestr('nav.xhtml', as_book_toc(args.title, nav_pages))
         f.writestr('stylesheet.css', STYLESHEET)
             
