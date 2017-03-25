@@ -31,11 +31,12 @@ if __name__ == '__main__':
         month = int(next(r)[0])
         days = next(r)[:7]
         for row in r:
-            if is_empty(row):
-                continue
-            day_of_month = as_date_row(row)
-            names_row = as_calendar_row(next(r))
-            for i, names in enumerate(names_row):
-                if names:
-                    print('{} {}-{:02d}-{:02d} {}'.format(days[i], year, month, day_of_month[i], names.replace('\n', ' ')))
+            next_row = next(r, None)
+            if next_row:
+                day_of_month = as_date_row(row)
+                names_row = as_calendar_row(next_row)
+                for i, names in enumerate(names_row):
+                    if names:
+                        print('{} {}-{:02d}-{:02d} {}'.format(days[i], year, month, day_of_month[i], names.replace('\n', ' ')))
+                next(r)
         print(comments)
