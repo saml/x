@@ -3,6 +3,7 @@
 import sqlite3
 import argparse
 import re
+import decimal
 
 verse_re = re.compile(r'\d+:(\d+)')
 books = [(ko.replace(' ', ''), en.strip()) for ko,en in (x.split('-', 2) for x in '''
@@ -83,50 +84,56 @@ def create_db(conn):
         FOREIGN KEY (book_id) REFERENCES books(rowid))''')
     conn.commit()
 
-def insert_kor(kor_conn, out_conn):
-    # CREATE TABLE chapters(book TEXT, chapter INT, text TEXT);
-    kor = kor_conn.cursor()
-    out = out_conn.cursor()
-    for book,chapter,chapter_text in kor.execute('''SELECT book,chapter,text FROM chapters'''):
-        print(book)
-        out.execute('SELECT rowid FROM books WHERE ko = ?', [book])
-        book_id = out.fetchone()[0]
-        verse_and_text = (x for x in verse_re.split(chapter_text) if x)
-        for verse in verse_and_text:
-            text = next(verse_and_text).strip()
-            print([book_id, chapter, verse, text])
-            out.execute('INSERT INTO verses (book_id, chapter, verse, ko) VALUES (?, ?, ?, ?)', [book_id, chapter, verse, text])
-    out_conn.commit()
+def get_kor_iter(kor, book_id_ko):
+    for kor_book,_ in books:
+        for book,chapter,chapter_text in kor.execute('SELECT book,chapter,text FROM chapters WHERE book = ? ORDER BY chapter ASC', [kor_book]):
+            book_id = book_id_ko[book]
+            verse_and_text = (x for x in verse_re.split(chapter_text) if x)
+            for verse in verse_and_text:
+                text = next(verse_and_text).strip()
+                yield book_id,chapter,int(verse),text
 
-def update_niv(niv_conn, out_conn):
-    # CREATE TABLE verses (id INTEGER PRIMARY KEY, book CHAR(7), verse REAL, unformatted TEXT);
-    # CREATE TABLE "books" (number INTEGER PRIMARY KEY, osis TEXT NOT NULL, human TEXT NOT NULL, chapters INTEGER NOT NULL);
-    niv =  niv_conn.cursor()
-    out = out_conn.cursor()
-
-    book_names = {book_key:book for book_key,book in niv.execute('SELECT osis,human FROM books')}
-    for book_key,chapter_verse,text in niv.execute('SELECT book, verse, unformatted FROM verses'):
-        book = book_names[book_key]
-        print(book)
-        out.execute('SELECT rowid FROM books WHERE en = ?', [book])
-        book_id = out.fetchone()[0]
-        chapter = int(chapter_verse)
-        verse = int((chapter_verse - chapter) * 1000)
-        print([book_id, chapter, verse, text])
-        out.execute('UPDATE verses SET en = ? WHERE book_id = ? AND chapter = ? AND verse = ?', [text, book_id, chapter, verse])
-    out_conn.commit()
-
+def get_niv_iter(niv, book_id_en, book_key_name, book_name_key):
+    decimal.getcontext().prec = 3
+    for _,en_book in books:
+        for book_key,chapter_verse,text in niv.execute('SELECT book, verse, unformatted FROM verses WHERE book = ?', [book_name_key[en_book]]):
+            book = book_key_name[book_key]
+            book_id = book_id_en[book]
+            chapter = int(chapter_verse)
+            verse = int((decimal.Decimal(str(chapter_verse)) - chapter) * 1000)
+            print(chapter_verse, chapter, verse)
+            yield book_id,chapter,verse,text
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--nocr', default='nocr.db')
     parser.add_argument('--niv', default='niv2011.sqlite3')
-    parser.add_argument('--output', default='bible.sqlite')
+    parser.add_argument('--output', default='bible_ko_niv.sqlite')
     args = parser.parse_args()
 
-    niv = sqlite3.connect(args.niv)
-    kor = sqlite3.connect(args.nocr)
-    out = sqlite3.connect(args.output)
-    #create_db(out)
+    niv_conn = sqlite3.connect(args.niv)
+    kor_conn = sqlite3.connect(args.nocr)
+    out_conn = sqlite3.connect(args.output)
+    
+    create_db(out_conn)
+    out = out_conn.cursor()
+    niv = niv_conn.cursor()
+    kor = kor_conn.cursor()
+    book_id_map = {rowid:(ko,en) for rowid,ko,en in out.execute('SELECT rowid,ko,en FROM books')}
+    book_id_ko = {ko:rowid for rowid,(ko,_) in book_id_map.items()}
+    book_id_en = {en:rowid for rowid,(_,en) in book_id_map.items()}
+    book_name_key_en = {book:book_key for book_key,book in niv.execute('SELECT osis,human FROM books')}
+    book_key_name_en = {book_key:book for book_key,book in niv.execute('SELECT osis,human FROM books')}
+    niv_iter = get_niv_iter(niv, book_id_en, book_key_name_en, book_name_key_en)
+    kor_iter = get_kor_iter(kor, book_id_ko)
+    for niv_row, kor_row in zip(niv_iter, kor_iter):
+        niv_book_id,niv_chapter,niv_verse,niv_text = niv_row
+        kor_book_id,kor_chapter,kor_verse,kor_text = kor_row
+        print('{} {} {}:{} / {} {}:{} {} {}'.format(book_id_map[niv_book_id], niv_book_id, niv_chapter, niv_verse, kor_book_id, kor_chapter, kor_verse, niv_text, kor_text))
+        if niv_book_id != kor_book_id or niv_chapter != kor_chapter or niv_verse != kor_verse:
+            break
+        out.execute('INSERT INTO verses (book_id, chapter, verse, ko, en) VALUES (?, ?, ?, ?, ?)', [niv_book_id, niv_chapter, niv_verse, kor_text, niv_text])
+    out_conn.commit()
+        
     #insert_kor(kor, out)
-    update_niv(niv, out)
+    #update_niv(niv, out)
