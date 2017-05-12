@@ -1,4 +1,5 @@
 # niv2011.sqlite3 https://github.com/liudongmiao/bibledata/blob/master/bibledata-en-niv2011.zip
+# niv.db https://github.com/anderson916/FreeWorship/blob/master/database/niv.db
 
 import sqlite3
 import argparse
@@ -93,7 +94,7 @@ def get_kor_iter(kor, book_id_ko):
                 text = next(verse_and_text).strip()
                 yield book_id,chapter,int(verse),text
 
-def get_niv_iter(niv, book_id_en, book_key_name, book_name_key):
+def _get_niv_iter(niv, book_id_en, book_key_name, book_name_key):
     decimal.getcontext().prec = 3
     for _,en_book in books:
         for book_key,chapter_verse,text in niv.execute('SELECT book, verse, unformatted FROM verses WHERE book = ?', [book_name_key[en_book]]):
@@ -104,10 +105,17 @@ def get_niv_iter(niv, book_id_en, book_key_name, book_name_key):
             print(chapter_verse, chapter, verse)
             yield book_id,chapter,verse,text
 
+def get_niv_iter(niv):
+    decimal.getcontext().prec = 3
+    for book_id,chapter,verse,text in niv.execute('SELECT bookid,chapterid,verseid,content from verse'):
+        yield book_id,chapter,verse,text
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--nocr', default='nocr.db')
-    parser.add_argument('--niv', default='niv2011.sqlite3')
+    parser.add_argument('--niv', default='niv.db')
+    # parser.add_argument('--niv', default='niv2011.sqlite3')
+    # parser.add_argument('--nivtxt', default='niv.db')
     parser.add_argument('--output', default='bible_ko_niv.sqlite')
     args = parser.parse_args()
 
@@ -122,9 +130,9 @@ if __name__ == '__main__':
     book_id_map = {rowid:(ko,en) for rowid,ko,en in out.execute('SELECT rowid,ko,en FROM books')}
     book_id_ko = {ko:rowid for rowid,(ko,_) in book_id_map.items()}
     book_id_en = {en:rowid for rowid,(_,en) in book_id_map.items()}
-    book_name_key_en = {book:book_key for book_key,book in niv.execute('SELECT osis,human FROM books')}
-    book_key_name_en = {book_key:book for book_key,book in niv.execute('SELECT osis,human FROM books')}
-    niv_iter = get_niv_iter(niv, book_id_en, book_key_name_en, book_name_key_en)
+    # book_name_key_en = {book:book_key for book_key,book in niv.execute('SELECT osis,human FROM books')}
+    # book_key_name_en = {book_key:book for book_key,book in niv.execute('SELECT osis,human FROM books')}
+    niv_iter = get_niv_iter(niv)
     kor_iter = get_kor_iter(kor, book_id_ko)
     for niv_row, kor_row in zip(niv_iter, kor_iter):
         niv_book_id,niv_chapter,niv_verse,niv_text = niv_row
