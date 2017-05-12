@@ -13,7 +13,6 @@ if __name__ == '__main__':
 ''')
     for book_id, chapter, verse, ko, en in c.execute('SELECT book_id, chapter, verse, ko, en FROM verses'):
         ko_name, en_name = books[book_id]
-        print(u'<p>{} / {} {}:{}<br>'.format(ko_name, en_name, chapter, verse))
-        print(newline.sub('<br>', ko))
-        print(newline.sub('<br>', en))
-        print(u'</p>')
+        if verse == 1:
+            print('<p>[{} {}] / [{} {}]</p>'.format(ko_name, chapter, en_name, chapter))
+        print('<p>{} {}<br>{} {}</p>'.format(verse, ko, verse, en))

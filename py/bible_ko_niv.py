@@ -6,7 +6,9 @@ if __name__ == '__main__':
     books = {rowid: (ko_name, en_name) for rowid,ko_name,en_name in c.execute('SELECT rowid,ko,en FROM books')}
     for book_id, chapter, verse, ko, en in c.execute('SELECT book_id, chapter, verse, ko, en FROM verses'):
         ko_name, en_name = books[book_id]
-        print(u'{} / {} {}:{}'.format(ko_name, en_name, chapter, verse))
-        print(ko)
-        print(en)
+        if verse == 1:
+            print('[{} {}] / [{} {}]'.format(ko_name, chapter, en_name, chapter))
+            print(u'\u2029')
+        print('''{} {}
+{} {}'''.format(verse, ko, verse, en))
         print(u'\u2029')
