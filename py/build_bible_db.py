@@ -1,4 +1,5 @@
 # niv2011.sqlite3 https://github.com/liudongmiao/bibledata/blob/master/bibledata-en-niv2011.zip
+# niv.db https://github.com/anderson916/FreeWorship/blob/master/database/niv.db
 
 import sqlite3
 import argparse
@@ -93,7 +94,7 @@ def get_kor_iter(kor, book_id_ko):
                 text = next(verse_and_text).strip()
                 yield book_id,chapter,int(verse),text
 
-def get_niv_iter(niv, book_id_en, book_key_name, book_name_key):
+def _get_niv_iter(niv, book_id_en, book_key_name, book_name_key):
     decimal.getcontext().prec = 3
     for _,en_book in books:
         for book_key,chapter_verse,text in niv.execute('SELECT book, verse, unformatted FROM verses WHERE book = ?', [book_name_key[en_book]]):
@@ -104,10 +105,52 @@ def get_niv_iter(niv, book_id_en, book_key_name, book_name_key):
             print(chapter_verse, chapter, verse)
             yield book_id,chapter,verse,text
 
+def get_niv_iter(niv):
+    modify_niv(niv)
+    decimal.getcontext().prec = 3
+    for book_id,chapter,verse,text in niv.execute('SELECT bookid,chapterid,verseid,content from verse order by bookid,chapterid,verseid'):
+        yield book_id,chapter,verse,text
+    
+
+def insert_na(niv, bookid, chapterid, verseid, content='(N/A)'):
+    if next(niv.execute('SELECT * from verse where bookid = ? and chapterid = ? and verseid = ?', [bookid, chapterid, verseid]), None) is None:
+        niv.execute('INSERT INTO verse (bookid, chapterid, verseid, content) VALUES (?,?,?,?)', [bookid, chapterid, verseid, content])
+    
+def modify_niv(niv):
+    # matthew
+    insert_na(niv, 40, 17, 21)
+    insert_na(niv, 40, 18, 11)
+    insert_na(niv, 40, 23, 14)
+
+    # mark
+    insert_na(niv, 41, 7, 16)
+    insert_na(niv, 41, 9, 44)
+    insert_na(niv, 41, 9, 46)
+    insert_na(niv, 41, 11, 26)
+    insert_na(niv, 41, 15, 28)
+
+    # luke
+    insert_na(niv, 42, 17, 36)
+    insert_na(niv, 42, 23, 17)
+
+    # john
+    insert_na(niv, 43, 5, 4)
+
+    # acts
+    insert_na(niv, 44, 8, 37)
+    insert_na(niv, 44, 15, 34)
+    insert_na(niv, 44, 24, 7)
+    insert_na(niv, 44, 28, 29)
+
+    # romans
+    insert_na(niv, 45, 16, 24)
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--nocr', default='nocr.db')
-    parser.add_argument('--niv', default='niv2011.sqlite3')
+    parser.add_argument('--niv', default='niv.db')
+    # parser.add_argument('--niv', default='niv2011.sqlite3')
+    # parser.add_argument('--nivtxt', default='niv.db')
     parser.add_argument('--output', default='bible_ko_niv.sqlite')
     args = parser.parse_args()
 
@@ -122,15 +165,15 @@ if __name__ == '__main__':
     book_id_map = {rowid:(ko,en) for rowid,ko,en in out.execute('SELECT rowid,ko,en FROM books')}
     book_id_ko = {ko:rowid for rowid,(ko,_) in book_id_map.items()}
     book_id_en = {en:rowid for rowid,(_,en) in book_id_map.items()}
-    book_name_key_en = {book:book_key for book_key,book in niv.execute('SELECT osis,human FROM books')}
-    book_key_name_en = {book_key:book for book_key,book in niv.execute('SELECT osis,human FROM books')}
-    niv_iter = get_niv_iter(niv, book_id_en, book_key_name_en, book_name_key_en)
+    # book_name_key_en = {book:book_key for book_key,book in niv.execute('SELECT osis,human FROM books')}
+    # book_key_name_en = {book_key:book for book_key,book in niv.execute('SELECT osis,human FROM books')}
+    niv_iter = get_niv_iter(niv)
     kor_iter = get_kor_iter(kor, book_id_ko)
     for niv_row, kor_row in zip(niv_iter, kor_iter):
         niv_book_id,niv_chapter,niv_verse,niv_text = niv_row
         kor_book_id,kor_chapter,kor_verse,kor_text = kor_row
-        print('{} {} {}:{} / {} {}:{} {} {}'.format(book_id_map[niv_book_id], niv_book_id, niv_chapter, niv_verse, kor_book_id, kor_chapter, kor_verse, niv_text, kor_text))
         if niv_book_id != kor_book_id or niv_chapter != kor_chapter or niv_verse != kor_verse:
+            print('{} {} {}:{} / {} {}:{} {} {}'.format(book_id_map[niv_book_id], niv_book_id, niv_chapter, niv_verse, kor_book_id, kor_chapter, kor_verse, niv_text, kor_text))
             break
         out.execute('INSERT INTO verses (book_id, chapter, verse, ko, en) VALUES (?, ?, ?, ?, ?)', [niv_book_id, niv_chapter, niv_verse, kor_text, niv_text])
     out_conn.commit()
