@@ -95,7 +95,7 @@ def create_engine_old(urls=DEFAULT_URLS):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
-    engine = create_engine_old()
+    engine = create_engine()
     Session.configure(bind=engine)
     # start(engine)
     start_session()
