@@ -8,6 +8,7 @@ import sqlalchemy.engine.url
 import sqlalchemy.pool
 import sqlalchemy.exc
 import sqlalchemy.event
+import sqlalchemy.orm
 import psycopg2
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,8 @@ DEFAULT_URLS=(
     'postgresql://postgres:postgres@localhost:5455/postgres',
 )
 
+
+Session = sqlalchemy.orm.scoped_session(session_factory=sqlalchemy.orm.sessionmaker())
 
 class Psycopg2Pool:
     '''Connects to one of given urls.'''
@@ -69,6 +72,15 @@ def start(engine):
                 logger.info(row)
         time.sleep(1)
 
+
+def start_session():
+    while True:
+        session = Session()
+        logger.info('session=%s', session)
+        for row in session.execute(sqlalchemy.select([1])):
+            logger.info(row)
+        time.sleep(1)
+
 def create_engine(urls=DEFAULT_URLS):
     '''reconnecting pool for sqlalchemy 1.2.0.'''
     get_connection = Psycopg2Pool(urls)
@@ -84,4 +96,6 @@ def create_engine_old(urls=DEFAULT_URLS):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
     engine = create_engine_old()
-    start(engine)
+    Session.configure(bind=engine)
+    # start(engine)
+    start_session()
