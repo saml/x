@@ -1,0 +1,14 @@
+version: "3"
+services:
+  db1:
+    image: "postgres:10"
+    ports:
+      - "5454:5432"
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+  db2:
+    image: "postgres:10"
+    ports:
+      - "5455:5432"
+    environment:
+      POSTGRES_PASSWORD: "postgres"
