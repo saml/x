@@ -2,6 +2,7 @@
 
 import time
 import logging
+import contextlib
 
 import sqlalchemy
 import sqlalchemy.engine.url
@@ -68,17 +69,22 @@ def start(engine):
     while True:
         with engine.connect() as conn:
             logger.info('conn=%s', conn)
-            for row in conn.execute(sqlalchemy.select([1])):
+            for row in conn.execute(sqlalchemy.select([2])):
                 logger.info(row)
         time.sleep(1)
 
 
 def start_session():
     while True:
+        # with contextlib.closing(Session()) as session:
         session = Session()
+        # try:
         logger.info('session=%s', session)
-        for row in session.execute(sqlalchemy.select([1])):
+        for row in session.execute(sqlalchemy.select([2])):
             logger.info(row)
+        # finally:
+        #     session.close()
+        Session.remove()
         time.sleep(1)
 
 def create_engine(urls=DEFAULT_URLS):
@@ -95,7 +101,7 @@ def create_engine_old(urls=DEFAULT_URLS):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
-    engine = create_engine()
+    engine = create_engine_old()
     Session.configure(bind=engine)
     # start(engine)
     start_session()
