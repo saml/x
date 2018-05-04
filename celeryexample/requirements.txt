@@ -1,2 +1,7 @@
-Flask==0.10.1
-Celery==3.1.18
+Flask==0.12.2
+celery==4.1.0
+eliot==1.3.0
+
+# dev
+eliot-tree==17.1.0
+
