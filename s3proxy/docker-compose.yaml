@@ -1,0 +1,12 @@
+version: '3'
+services:
+  s3:
+    build:
+      dockerfile: Dockerfile-minio
+      context: .
+    environment:
+      MINIO_ACCESS_KEY: minio_key
+      MINIO_SECRET_KEY: minio_key
+    ports:
+      - 9000:9000
+    command: ['minio', 'server', '/s3']

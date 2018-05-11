@@ -1,0 +1,3 @@
+FROM minio/minio:RELEASE.2018-05-11T00-29-24Z
+RUN mkdir -p /s3/bucketname
+CMD ['server', '/s3']
