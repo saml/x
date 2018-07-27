@@ -1,0 +1,23 @@
+version: '3'
+services:
+  uwsgi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ['tini', '--', 'uwsgi', 'uwsgi.ini']
+    volumes:
+      - .:/app
+    ports:
+      - '5000:5000'
+      - '5050:5050'
+    sysctls:
+      net.core.somaxconn: 1024
+  nginx:
+    image: nginx:1.15.2-alpine
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - .:/app
+    ports:
+      - '8080:80'
+    depends_on:
+      - uwsgi
