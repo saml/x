@@ -1,5 +1,7 @@
 package main
 
+// Usage: ./sitemapxml -url <url> > urls.txt
+
 import (
 	"encoding/xml"
 	"flag"
