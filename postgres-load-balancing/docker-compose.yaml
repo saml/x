@@ -1,0 +1,58 @@
+version: '3'
+services:
+  dnsmasq:
+    image: jpillora/dnsmasq:latest
+    volumes:
+      - './dnsmasq.conf:/etc/dnsmasq.conf'
+    ports:
+      - '8080:8080'
+    networks:
+      pg:
+        ipv4_address: 192.168.100.2
+  pg1:
+    image: postgres:9.6.2-alpine
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      pg:
+        ipv4_address: 192.168.100.3
+    # dns: 
+    #   - 192.168.100.4
+    #   - 8.8.8.8
+    # depends_on:
+    #   - dnsmasq
+    # deploy:
+    #   mode: replicated
+    #   replicas: 2
+  pg2:
+    image: postgres:9.6.2-alpine
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      pg:
+        ipv4_address: 192.168.100.4
+  pgbouncer:
+    image: edoburu/pgbouncer:1.9.0
+    environment:
+      DB_HOST: pg
+    ports:
+      - '5432:5432'
+    networks:
+      - pg
+    dns:
+      - 192.168.100.2
+    depends_on:
+      - dnsmasq
+      - pg1
+      - pg2
+networks:
+  pg:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: '192.168.100.0/24'
