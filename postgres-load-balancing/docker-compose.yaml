@@ -54,6 +54,17 @@ services:
     depends_on:
       - pg1
       - pg2
+  haproxy:
+    image: haproxy:1.8-alpine
+    networks:
+      - pg
+    ports:
+      - '5432:5432'
+    volumes:
+      - './haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg'
+    depends_on:
+      - pg1
+      - pg2
 networks:
   pg:
     driver: bridge
