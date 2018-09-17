@@ -49,6 +49,7 @@ services:
       - pg
     volumes:
       - './pgpool.conf:/etc/pgpool.conf'
+      - './pool_hba.conf:/etc/pool_hba.conf'
     ports:
       - '5432:5432'
     depends_on:
