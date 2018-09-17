@@ -1,6 +1,8 @@
 # About
 
 Attempts at load balancing postgres reads using various ways.
+Currently, only DNS round robin and HAProxy works.
+I could not get pgpool and pgbouncer to load balance.
 
 # Quickstart
 
@@ -14,56 +16,69 @@ $ docker-compose up pg2
 # start dns server (for pgbouncer load balancing)
 $ docker-compose up dnsmasq
 
+# start middleware
+# only only one of below:
+
 # test pgbouncer
 $ docker-compose up pgbouncer
 
+# test pgpool
+$ docker-compose up pgpool
+
+# test haproxy
+$ docker-compose up haproxy
+```
+
+Connect to middleware:
+
+```
 $ psql --host=localhost --username=postgres --password test
 # password is postgres
 
-# test pgpool (must kill pgbouncer service first)
-$ docker-compose up pgpool
+test=# select inet_server_addr();
 ```
 
 # Status
 
-- Round robin works:
-    ```
-    $ docker-compose exec pgbouncer sh
-    $ psql --host=pg --username=postgres --password test
-    test=# select inet_server_addr();
-    inet_server_addr 
-    ------------------
-    192.168.100.4
-    
-    test=# \c
+Name|Load balance|Failover
+----|-------------|-------
+DNS round robin|Yes|Yes
+haproxy|Yes|Yes
+pgpool|No|No
+pgbouncer|No|No
 
-    test=# select inet_server_addr();
-    inet_server_addr 
-    ------------------
-    192.168.100.3
-    ```
-- But, connecting directly to pgbouncer does not work:
-    ```
-    $ psql --host=localhost --username=postgres --password  test
-    Password for user postgres: 
-    psql: ERROR:  no such user: postgres
+To test load balance, connect to middleware using `psql` and check server address.
+And reconnect using `\c` and check it connects to different server.
 
-    # pgbouncer log
-    pgbouncer_1  | 2018-09-13 21:21:14.168 1 WARNING C-0x5620393c5450: (nodb)/(nouser)@192.168.100.1:39942 pooler error: no such user: postgres
-    ```
-    - Need to figure out how to configure pgbouncer auth to be passthrough
-- pgpool does not work either even though backend nodes are reachable.
-    ```
-    pgpool_1     | 2018-09-13 21:23:21: pid 25: FATAL:  pgpool is not accepting any new connections
-    pgpool_1     | 2018-09-13 21:23:21: pid 25: DETAIL:  all backend nodes are down, pgpool requires at least one valid node
-    pgpool_1     | 2018-09-13 21:23:21: pid 25: HINT:  repair the backend nodes and restart pgpool
+To test failover, connect to middleware, check server address. And, kill the server.
+And, reconnect and see if it connects to different server.
 
-    $ docker-compose exec pgpool sh
-    $ ping pg1
-    PING pg1 (192.168.100.3): 56 data bytes
-    64 bytes from 192.168.100.3: seq=0 ttl=64 time=0.092 ms
-    $ ping pg2
-    PING pg2 (192.168.100.4): 56 data bytes
-    64 bytes from 192.168.100.4: seq=0 ttl=64 time=0.143 ms
-    ```
-    - Need to figure out how to configure pgpool.
+## DNS round robin
+
+DNS round robin can be tested inside pgbouncer container
+(only pgbouncer is configured with round robin DNS):
+
+```
+$ docker-compose exec pgbouncer sh
+# pg is host name that round robins two servers.
+> psql --host=pg --username=postgres --password test
+test=# select inet_server_addr();
+inet_server_addr 
+------------------
+192.168.100.4
+
+test=# \c
+
+test=# select inet_server_addr();
+inet_server_addr 
+------------------
+192.168.100.3
+```
+
+### HAProxy
+
+HAProxy can be tested from host (not inside container):
+
+```
+$ psql --host=localhost --username=postgres --password test
+```
