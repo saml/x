@@ -40,18 +40,19 @@ test=# select inet_server_addr();
 
 # Status
 
-Name|Load balance|Failover
-----|-------------|-------
-DNS round robin|Yes|Yes
-haproxy|Yes|Yes
-pgpool|No|No
-pgbouncer|No|No
+Name|Load balance|Failover|Note
+----|-------------|-------|----
+DNS round robin|Yes|Yes|When db goes down, reconnection could take a long time since psql tries IP that's unhealthy then falls back to the second one.
+haproxy|Yes|Yes|Failover is quick, there is no delay observed in DNS round robin
+pgpool|No|No|Cannot set up as transparent proxy (authentication is passthrough)
+pgbouncer|No|No|Cannot set up as transparent proxy
 
 To test load balance, connect to middleware using `psql` and check server address.
 And reconnect using `\c` and check it connects to different server.
 
 To test failover, connect to middleware, check server address. And, kill the server.
 And, reconnect and see if it connects to different server.
+
 
 ## DNS round robin
 
