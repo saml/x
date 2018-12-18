@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"io/ioutil"
 	"regexp"
-	"strings"
+	"strconv"
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/saml/x/vcarve"
 	"github.com/saml/x/vcarve/ffmpeg"
+	"github.com/saml/x/vcarve/interval"
 )
 
-var intervalRe = regexp.MustCompile(`^.*silence_end:  | silence_duration: 1.24154.*$`)
+var intervalRe = regexp.MustCompile(` silence_end: ([\d.]+) | silence_duration: ([\d.]+)`)
 
 func readAll(stderr *bufio.Reader) string {
 	out, err := ioutil.ReadAll(stderr)
@@ -24,25 +24,36 @@ func readAll(stderr *bufio.Reader) string {
 }
 
 // Exec runs ffmpeg to detect silence intervals.
-func Exec(ff ffmpeg.Runner, vid string) ([]vcarve.Interval, error) {
+func Exec(ff ffmpeg.Runner, vid string) ([]*interval.Interval, error) {
 	args := []string{"-hide_banner", "-i", vid, "-af", "silencedetect=duration=1:noise=0.1", "-f", "null", "-"}
 	stderr, err := ff.Exec(args...)
 	if err != nil {
 		log.Print(readAll(stderr))
 		return nil, err
 	}
-	return parse(stderr)
+	return ParseSilence(stderr)
 }
 
-func parse(stderr *bufio.Reader) ([]vcarve.Interval, error) {
+// ParseSilence parses silence intervals out of stderr.
+func ParseSilence(stderr *bufio.Reader) ([]*interval.Interval, error) {
 	scanner := bufio.NewScanner(stderr)
+	var intervals []*interval.Interval
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, "silence_duration: ") {
-			log.Print(line)
+		match := intervalRe.FindAllStringSubmatch(line, -1)
+
+		if len(match) == 2 {
+			end, err := strconv.ParseFloat(match[0][1], 64)
+			if err != nil {
+				return nil, err
+			}
+			duration, err := strconv.ParseFloat(match[1][2], 64)
+			if err != nil {
+				return nil, err
+			}
+			intervals = append(intervals, interval.New(end-duration, end))
 		}
+
 	}
-	log.Print("hello")
-	// log.Print(readAll(stderr))
-	return []vcarve.Interval{}, nil
+	return intervals, nil
 }
