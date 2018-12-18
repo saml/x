@@ -43,7 +43,173 @@ func TestParseSilence(t *testing.T) {
 	}
 	for i := range intervals {
 		if !tt.IntervalSimilar(expected[i], intervals[i]) {
-			t.Errorf("Not equal: %v = %v", expected[i], intervals[i])
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
+	}
+}
+
+func TestInclude(t *testing.T) {
+	keyFrames := []float64{
+		0.0,
+		1.0,
+		2.0,
+		3.0,
+		4.0,
+	}
+	silences := []*interval.Interval{
+		interval.New(0.0, 0.5),
+		interval.New(0.6, 0.7),
+		interval.New(0.9, 2.8),
+	}
+	expected := []*interval.Interval{
+		interval.New(3.0, 4.0),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
+	}
+}
+
+func TestIncludeNoSilence(t *testing.T) {
+	keyFrames := []float64{
+		0.0,
+		1.0,
+		2.0,
+		3.0,
+		4.0,
+	}
+	var silences []*interval.Interval
+	expected := []*interval.Interval{
+		interval.New(0.0, 4.0),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
+	}
+}
+
+func TestIncludeMultiple(t *testing.T) {
+	keyFrames := []float64{
+		0.0,
+		2.0,
+		4.0,
+		8.0,
+		9.0,
+		10.0,
+		12.0,
+		13.0,
+		14.0,
+	}
+	silences := []*interval.Interval{
+		interval.New(0.0, 1.0),
+		interval.New(3.0, 5.0),
+		interval.New(6.0, 7.0),
+		interval.New(11.0, 12.0),
+	}
+	expected := []*interval.Interval{
+		interval.New(8.0, 10.0),
+		interval.New(12.0, 14.0),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
+	}
+}
+
+func TestIncludeMostlySilence(t *testing.T) {
+	keyFrames := []float64{
+		0.0,
+		2.0,
+		4.0,
+	}
+	silences := []*interval.Interval{
+		interval.New(0.0, 2.1),
+		interval.New(3.0, 4.0),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(intervals) > 0 {
+		t.Errorf("Expecting []. Got non empty array: %v", intervals)
+	}
+}
+
+func TestIncludeAllSilence(t *testing.T) {
+	keyFrames := []float64{
+		0.0,
+		2.0,
+		4.0,
+	}
+	silences := []*interval.Interval{
+		interval.New(0.0, 4),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(intervals) > 0 {
+		t.Errorf("Expecting []. Got non empty array: %v", intervals)
+	}
+}
+
+func TestIncludeMostlySilenceStartsLater(t *testing.T) {
+	keyFrames := []float64{
+		0.0,
+		2.0,
+		4.0,
+	}
+	silences := []*interval.Interval{
+		interval.New(1.9, 4),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(intervals) > 0 {
+		t.Errorf("Expecting []. Got non empty array: %v", intervals)
+	}
+}
+
+func TestIncludeSilenceStartsLater(t *testing.T) {
+	keyFrames := []float64{
+		0.0,
+		1.0,
+		2.0,
+	}
+	silences := []*interval.Interval{
+		interval.New(1.9, 2),
+	}
+	expected := []*interval.Interval{
+		interval.New(0.0, 1.0),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
 		}
 	}
 }

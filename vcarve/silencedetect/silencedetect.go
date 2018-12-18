@@ -57,3 +57,60 @@ func ParseSilence(stderr *bufio.Reader) ([]*interval.Interval, error) {
 	}
 	return intervals, nil
 }
+
+// Include calculates sections of video to include, carving out silences.
+// Sections are synced to keyFrames.
+// keyFrames have length >= 2. keyFrames[0] = 0.0; keyFrames[-1] = video duration.
+func Include(silences []*interval.Interval, keyFrames []float64) []*interval.Interval {
+	var intervals []*interval.Interval
+	var start int
+	var end int
+	var i int // silences index.
+	if len(silences) == 0 {
+		return []*interval.Interval{
+			interval.New(keyFrames[start], keyFrames[len(keyFrames)-1]),
+		}
+	}
+
+	// // first section is free of silence.
+	// for end < len(keyFrames) && silences[i].Start <= keyFrames[end] {
+	// 	end++
+	// }
+	// // end is past Start.
+	// if end-1 > start {
+	// 	intervals = append(intervals, interval.New(keyFrames[start], keyFrames[end-1]))
+	// }
+
+	for end < len(keyFrames) && i < len(silences) {
+		// move start past End
+		for start < len(keyFrames) && silences[i].End > keyFrames[start] {
+			start++
+		}
+
+		// next silence
+		for i < len(silences) && silences[i].End <= keyFrames[start] {
+			i++
+		}
+		if i == len(silences) {
+			break
+		}
+
+		// find end before Start
+		end = start
+		for end < len(keyFrames) && silences[i].Start >= keyFrames[end] {
+			end++
+		}
+
+		// end includes Start.
+		// there is at least one interval free of silence.
+		if end-1 > start {
+			intervals = append(intervals, interval.New(keyFrames[start], keyFrames[end-1]))
+		}
+	}
+
+	// last section is free of silence.
+	if start < len(keyFrames)-1 && silences[len(silences)-1].End <= keyFrames[start] {
+		intervals = append(intervals, interval.New(keyFrames[start], keyFrames[len(keyFrames)-1]))
+	}
+	return intervals
+}
