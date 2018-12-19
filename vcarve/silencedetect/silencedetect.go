@@ -64,10 +64,6 @@ func ParseSilence(stderr *bufio.Reader) ([]*interval.Interval, error) {
 func Include(silences []*interval.Interval, keyFrames []float64) []*interval.Interval {
 	var intervals []*interval.Interval
 
-	// silences index.
-	var curr int
-	next := 1
-
 	// keyFrames index.
 	var i int
 	var start int
@@ -76,7 +72,7 @@ func Include(silences []*interval.Interval, keyFrames []float64) []*interval.Int
 	silences = append([]*interval.Interval{interval.New(0, 0)}, silences...)
 	silences = append(silences, interval.New(keyFrames[len(keyFrames)-1], -1))
 
-	for next < len(silences) {
+	for curr, next := 0, 1; next < len(silences); curr, next = curr+1, next+1 {
 		for i < len(keyFrames) && silences[curr].End > keyFrames[i] {
 			i++
 		}
@@ -90,8 +86,6 @@ func Include(silences []*interval.Interval, keyFrames []float64) []*interval.Int
 		if i-1 > start {
 			intervals = append(intervals, interval.New(keyFrames[start], keyFrames[i-1]))
 		}
-		curr++
-		next++
 	}
 	return intervals
 }
