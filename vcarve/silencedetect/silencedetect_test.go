@@ -25,6 +25,7 @@ func TestParseSilence(t *testing.T) {
 	[silencedetect @ 0x55a13db38480] silence_end: 27.7528 | silence_duration: 1.26245
 	frame= 1800 fps=1072 q=-0.0 Lsize=N/A time=00:00:30.00 bitrate=N/A speed=17.9x
 	`))
+	// I expect (silence_start, silence_end) pairs.
 	expected := []*interval.Interval{
 		interval.New(0.0, 9.79599),
 		interval.New(10.2968, 11.5384),
@@ -172,34 +173,138 @@ func TestIncludeAllSilence(t *testing.T) {
 	}
 }
 
-func TestIncludeMostlySilenceStartsLater(t *testing.T) {
+func TestIncludeBeginning(t *testing.T) {
+	// no silence in the beginning. So, include the beginning.
 	keyFrames := []float64{
-		0.0,
-		2.0,
-		4.0,
+		0,
+		1,
+		2,
+		3,
 	}
 	silences := []*interval.Interval{
-		interval.New(1.9, 4),
+		interval.New(2.0, 2.1),
+	}
+	expected := []*interval.Interval{
+		interval.New(0, 2),
 	}
 
 	intervals := silencedetect.Include(silences, keyFrames)
 
-	if len(intervals) > 0 {
-		t.Errorf("Expecting []. Got non empty array: %v", intervals)
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
 	}
 }
 
-func TestIncludeSilenceStartsLater(t *testing.T) {
+func TestIncludeEnd(t *testing.T) {
+	// no silence at the end. So, include the end.
 	keyFrames := []float64{
-		0.0,
-		1.0,
-		2.0,
+		0,
+		1,
+		2,
+		3,
 	}
 	silences := []*interval.Interval{
-		interval.New(1.9, 2),
+		interval.New(0, 2),
 	}
 	expected := []*interval.Interval{
-		interval.New(0.0, 1.0),
+		interval.New(2, 3),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
+	}
+}
+
+func TestIncludeMiddle(t *testing.T) {
+	// no silence in the middle. So, include the middle
+	keyFrames := []float64{
+		0,
+		1,
+		2,
+		3,
+	}
+	silences := []*interval.Interval{
+		interval.New(0, 1),
+		interval.New(2, 3),
+	}
+	expected := []*interval.Interval{
+		interval.New(1, 2),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
+	}
+}
+
+func TestIncludeComplement(t *testing.T) {
+	keyFrames := []float64{
+		0,
+		1,
+		2,
+		3,
+		4,
+		5,
+	}
+	silences := []*interval.Interval{
+		interval.New(1, 2),
+		interval.New(3, 4),
+	}
+	expected := []*interval.Interval{
+		interval.New(0, 1),
+		interval.New(2, 3),
+		interval.New(4, 5),
+	}
+
+	intervals := silencedetect.Include(silences, keyFrames)
+
+	if len(expected) != len(intervals) {
+		t.Errorf("Not same length: %v = %v", expected, intervals)
+	}
+	for i := range intervals {
+		if !tt.IntervalSimilar(expected[i], intervals[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], intervals[i])
+		}
+	}
+}
+
+func TestIncludeComplementNotExact(t *testing.T) {
+	keyFrames := []float64{
+		0,
+		1,
+		2,
+		3,
+		4,
+		5,
+	}
+	silences := []*interval.Interval{
+		interval.New(1.5, 1.6),
+		interval.New(1.7, 1.8),
+		interval.New(3.2, 3.5),
+		interval.New(3.8, 3.9),
+	}
+	expected := []*interval.Interval{
+		interval.New(0, 1),
+		interval.New(2, 3),
+		interval.New(4, 5),
 	}
 
 	intervals := silencedetect.Include(silences, keyFrames)
