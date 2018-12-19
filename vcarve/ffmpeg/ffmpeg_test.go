@@ -1,11 +1,11 @@
-package vcarve_test
+package ffmpeg_test
 
 import (
 	"bufio"
 	"strings"
 	"testing"
 
-	"github.com/saml/x/vcarve"
+	"github.com/saml/x/vcarve/ffmpeg"
 	tt "github.com/saml/x/vcarve/testing"
 )
 
@@ -23,7 +23,7 @@ func TestParseFloats(t *testing.T) {
 		2.0,
 	}
 
-	result, err := vcarve.ParseFloats(stdout)
+	result, err := ffmpeg.ParseFloats(stdout)
 
 	if err != nil {
 		t.Error(err)
@@ -46,7 +46,7 @@ func TestParseFloatsNoValid(t *testing.T) {
 	
 	`))
 
-	result, err := vcarve.ParseFloats(stdout)
+	result, err := ffmpeg.ParseFloats(stdout)
 
 	if err != nil {
 		t.Error(err)
