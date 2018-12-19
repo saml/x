@@ -6,5 +6,17 @@ Carves unnecessary segments of a video.
 
 ```
 go build ./cmd/vcarve/
-./vcarve 2>&1 | jq .message -r
+./vcarve
+
+go test ./...
+```
+
+Or, use make
+
+```
+make
+bin/vcarve
+
+make test
+make clean
 ```
