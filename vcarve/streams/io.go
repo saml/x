@@ -1,4 +1,4 @@
-package vcarve
+package streams
 
 import (
 	"bufio"
@@ -8,8 +8,8 @@ import (
 )
 
 // ReadString reads as string.
-func ReadString(stderr *bufio.Reader) string {
-	out, err := ioutil.ReadAll(stderr)
+func ReadString(reader *bufio.Reader) string {
+	out, err := ioutil.ReadAll(reader)
 	if err != nil {
 		log.Print(err)
 		return ""

@@ -7,9 +7,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/saml/x/vcarve"
 	"github.com/saml/x/vcarve/ffmpeg"
 	"github.com/saml/x/vcarve/interval"
+	"github.com/saml/x/vcarve/streams"
 )
 
 var intervalRe = regexp.MustCompile(` silence_end: ([\d.]+) | silence_duration: ([\d.]+)`)
@@ -19,7 +19,7 @@ func Exec(ff ffmpeg.Runner, vid string) ([]*interval.Interval, error) {
 	args := []string{"-hide_banner", "-i", vid, "-af", "silencedetect=duration=1:noise=0.1", "-f", "null", "-"}
 	stderr, err := ff.ExecFFmpeg(args...)
 	if err != nil {
-		log.Print(vcarve.ReadString(stderr))
+		log.Print(streams.ReadString(stderr))
 		return nil, err
 	}
 	return ParseSilence(stderr)

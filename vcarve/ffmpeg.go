@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/saml/x/vcarve/ffmpeg"
+	"github.com/saml/x/vcarve/streams"
 )
 
 // ExecKeyFrames runs FFprobe to find key frame locations (in seconds).
@@ -20,7 +21,7 @@ func ExecKeyFrames(app ffmpeg.Runner, vid string) ([]float64, error) {
 		vid,
 	)
 	if err != nil {
-		log.Print(ReadString(stdout))
+		log.Print(streams.ReadString(stdout))
 		return nil, err
 	}
 
