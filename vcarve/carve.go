@@ -78,12 +78,12 @@ func CarveSilence(ff ffmpeg.Runner, vid string, script string, output string) er
 		return err
 	}
 
-	keyFrames, err := ExecKeyFrames(ff, vid)
+	duration, err := ffmpeg.Duration(ff, vid)
 	if err != nil {
 		return err
 	}
 
-	intervals := silencedetect.Include(silences, keyFrames)
+	intervals := silencedetect.Invert(silences, duration)
 
 	err = WriteFilterGraph(intervals, script)
 	if err != nil {

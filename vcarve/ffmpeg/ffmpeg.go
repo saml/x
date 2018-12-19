@@ -4,8 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"os/exec"
+	"strconv"
+	"strings"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/saml/x/vcarve/streams"
 )
 
 // App is an application that uses FFmpeg cli.
@@ -38,4 +42,20 @@ func (app *App) ExecFFprobe(args ...string) (*bufio.Reader, error) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	return bufio.NewReader(&out), err
+}
+
+// Duration reads duration of video.
+func Duration(ff Runner, vid string) (float64, error) {
+	stdout, err := ff.ExecFFprobe("-loglevel", "error", "-show_entries", "format=duration", "-of", "csv=print_section=0", "-i", vid)
+	if err != nil {
+		return 0, err
+	}
+
+	line := strings.TrimSpace(streams.ReadString(stdout))
+	result, err := strconv.ParseFloat(line, 64)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+
 }

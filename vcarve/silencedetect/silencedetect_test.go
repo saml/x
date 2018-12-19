@@ -318,3 +318,61 @@ func TestIncludeComplementNotExact(t *testing.T) {
 		}
 	}
 }
+
+func TestInvertNoSilence(t *testing.T) {
+	duration := 3.0
+	expected := []*interval.Interval{
+		interval.New(0, duration),
+	}
+
+	result := silencedetect.Invert(nil, duration)
+
+	if len(expected) != len(result) {
+		t.Errorf("Not same length: %v = %v", expected, result)
+	}
+	for i := range result {
+		if !tt.IntervalSimilar(expected[i], result[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], result[i])
+		}
+	}
+}
+
+func TestInvertAllSilence(t *testing.T) {
+	duration := 3.0
+	silences := []*interval.Interval{
+		interval.New(0, duration),
+	}
+
+	result := silencedetect.Invert(silences, duration)
+
+	if len(result) > 0 {
+		t.Errorf("Expecting []. Got non empty array: %v", result)
+		for i, x := range result {
+			t.Logf("result[%d]=%v", i, x)
+		}
+	}
+}
+
+func TestInvertMultipleSilences(t *testing.T) {
+	duration := 5.0
+	silences := []*interval.Interval{
+		interval.New(1, 2),
+		interval.New(3, 4),
+	}
+	expected := []*interval.Interval{
+		interval.New(0, 1),
+		interval.New(2, 3),
+		interval.New(4, 5),
+	}
+
+	result := silencedetect.Invert(silences, duration)
+
+	if len(expected) != len(result) {
+		t.Errorf("Not same length: %v = %v", expected, result)
+	}
+	for i := range result {
+		if !tt.IntervalSimilar(expected[i], result[i]) {
+			t.Errorf("Not same interval: %v = %v", expected[i], result[i])
+		}
+	}
+}

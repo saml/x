@@ -17,7 +17,7 @@ func main() {
 	ffprobePath := flag.String("ffprobe", "ffprobe", "path to ffprobe")
 	flag.Parse()
 
-	if flag.NArg() < 1 {
+	if flag.NArg() < 1 || *input == "" {
 		flag.Usage()
 		os.Exit(1)
 	}

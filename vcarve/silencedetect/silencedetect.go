@@ -80,3 +80,19 @@ func Include(silences []*interval.Interval, keyFrames []float64) []*interval.Int
 	}
 	return intervals
 }
+
+// Invert returns non-silent sections of video
+func Invert(silences []*interval.Interval, duration float64) []*interval.Interval {
+	var intervals []*interval.Interval
+
+	// add sentinels
+	silences = append([]*interval.Interval{interval.New(0, 0)}, silences...)
+	silences = append(silences, interval.New(duration, -1))
+
+	for curr, next := 0, 1; next < len(silences); curr, next = curr+1, next+1 {
+		if silences[next].Start > silences[curr].End {
+			intervals = append(intervals, interval.New(silences[curr].End, silences[next].Start))
+		}
+	}
+	return intervals
+}
