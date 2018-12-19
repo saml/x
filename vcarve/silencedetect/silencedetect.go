@@ -60,57 +60,38 @@ func ParseSilence(stderr *bufio.Reader) ([]*interval.Interval, error) {
 
 // Include calculates sections of video to include, carving out silences.
 // Sections are synced to keyFrames.
-// keyFrames have length >= 2. keyFrames[0] = 0.0; keyFrames[-1] = video duration.
+// keyFrames must have length >= 2. keyFrames[0] = 0.0; keyFrames[-1] = video duration.
 func Include(silences []*interval.Interval, keyFrames []float64) []*interval.Interval {
 	var intervals []*interval.Interval
+
+	// silences index.
+	var curr int
+	next := 1
+
+	// keyFrames index.
+	var i int
 	var start int
-	var end int
-	var i int // silences index.
-	if len(silences) == 0 {
-		return []*interval.Interval{
-			interval.New(keyFrames[start], keyFrames[len(keyFrames)-1]),
-		}
-	}
 
-	// // first section is free of silence.
-	// for end < len(keyFrames) && silences[i].Start <= keyFrames[end] {
-	// 	end++
-	// }
-	// // end is past Start.
-	// if end-1 > start {
-	// 	intervals = append(intervals, interval.New(keyFrames[start], keyFrames[end-1]))
-	// }
+	// add sentinels
+	silences = append([]*interval.Interval{interval.New(0, 0)}, silences...)
+	silences = append(silences, interval.New(keyFrames[len(keyFrames)-1], -1))
 
-	for end < len(keyFrames) && i < len(silences) {
-		// move start past End
-		for start < len(keyFrames) && silences[i].End > keyFrames[start] {
-			start++
-		}
-
-		// next silence
-		for i < len(silences) && silences[i].End <= keyFrames[start] {
+	for next < len(silences) {
+		for i < len(keyFrames) && silences[curr].End > keyFrames[i] {
 			i++
 		}
-		if i == len(silences) {
-			break
-		}
+		// keyFrames[i] is possible start of interval to include.
+		start = i
 
-		// find end before Start
-		end = start
-		for end < len(keyFrames) && silences[i].Start >= keyFrames[end] {
-			end++
+		for i < len(keyFrames) && silences[next].Start >= keyFrames[i] {
+			i++
 		}
-
-		// end includes Start.
-		// there is at least one interval free of silence.
-		if end-1 > start {
-			intervals = append(intervals, interval.New(keyFrames[start], keyFrames[end-1]))
+		// keyFrames[i-1] is possible end of interval to include.
+		if i-1 > start {
+			intervals = append(intervals, interval.New(keyFrames[start], keyFrames[i-1]))
 		}
-	}
-
-	// last section is free of silence.
-	if start < len(keyFrames)-1 && silences[len(silences)-1].End <= keyFrames[start] {
-		intervals = append(intervals, interval.New(keyFrames[start], keyFrames[len(keyFrames)-1]))
+		curr++
+		next++
 	}
 	return intervals
 }
