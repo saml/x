@@ -15,7 +15,7 @@ import (
 func ExecKeyFrames(app ffmpeg.Runner, vid string) ([]float64, error) {
 	stdout, err := app.ExecFFprobe("-loglevel", "error",
 		"-skip_frame", "nokey",
-		"-select_streams", "v:0",
+		"-select_streams", "v",
 		"-show_entries", "frame=pkt_pts_time",
 		"-of", "csv=print_section=0",
 		vid,
