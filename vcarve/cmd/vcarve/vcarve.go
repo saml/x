@@ -7,7 +7,8 @@ import (
 
 func main() {
 	app := &ffmpeg.App{
-		Cmd: "ffmpeg",
+		FFmpeg:  "ffmpeg",
+		FFprobe: "ffprobe",
 	}
 
 	silencedetect.Exec(app, "/tmp/a.mkv")

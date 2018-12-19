@@ -2,33 +2,24 @@ package silencedetect
 
 import (
 	"bufio"
-	"io/ioutil"
 	"regexp"
 	"strconv"
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/saml/x/vcarve"
 	"github.com/saml/x/vcarve/ffmpeg"
 	"github.com/saml/x/vcarve/interval"
 )
 
 var intervalRe = regexp.MustCompile(` silence_end: ([\d.]+) | silence_duration: ([\d.]+)`)
 
-func readAll(stderr *bufio.Reader) string {
-	out, err := ioutil.ReadAll(stderr)
-	if err != nil {
-		log.Print(err)
-		return ""
-	}
-	return string(out)
-}
-
 // Exec runs ffmpeg to detect silence intervals.
 func Exec(ff ffmpeg.Runner, vid string) ([]*interval.Interval, error) {
 	args := []string{"-hide_banner", "-i", vid, "-af", "silencedetect=duration=1:noise=0.1", "-f", "null", "-"}
-	stderr, err := ff.Exec(args...)
+	stderr, err := ff.ExecFFmpeg(args...)
 	if err != nil {
-		log.Print(readAll(stderr))
+		log.Print(vcarve.ReadString(stderr))
 		return nil, err
 	}
 	return ParseSilence(stderr)
