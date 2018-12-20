@@ -10,6 +10,7 @@ import (
 
 	"github.com/saml/x/vcarve/ffmpeg"
 	"github.com/saml/x/vcarve/interval"
+	"github.com/saml/x/vcarve/scenedetect"
 	"github.com/saml/x/vcarve/silencedetect"
 	"github.com/saml/x/vcarve/streams"
 )
@@ -129,6 +130,22 @@ func (app *App) Carve(intervals []*interval.Interval) error {
 // There are even number of seconds.
 func (app *App) CarveSeconds(seconds io.Reader) error {
 	intervals, err := interval.ReadIntervals(seconds)
+	if err != nil {
+		return err
+	}
+
+	return app.Carve(intervals)
+}
+
+// CarveSceneChange extracts scence changes from video.
+func (app *App) CarveSceneChange(minDuration float64, probability float64) error {
+
+	duration, err := ffmpeg.Duration(app.FFmpeg, app.Input)
+	if err != nil {
+		return err
+	}
+
+	intervals, err := scenedetect.SceneIntervals(app.FFmpeg, app.Input, probability, minDuration, duration)
 	if err != nil {
 		return err
 	}
