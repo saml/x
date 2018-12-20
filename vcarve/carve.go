@@ -72,31 +72,19 @@ func WriteTrim(intervals []*interval.Interval, output string) error {
 }
 
 // CarveSilence carves silence from video.
-func CarveSilence(ff ffmpeg.Runner, vid string, script string, output string) error {
-	silences, err := silencedetect.Exec(ff, vid)
+func (app *App) CarveSilence() error {
+	silences, err := silencedetect.Exec(app.FFmpeg, app.Input)
 	if err != nil {
 		return err
 	}
 
-	duration, err := ffmpeg.Duration(ff, vid)
+	duration, err := ffmpeg.Duration(app.FFmpeg, app.Input)
 	if err != nil {
 		return err
 	}
 
 	intervals := silencedetect.Invert(silences, duration)
-
-	err = WriteSelect(intervals, script)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Writing output video: %v", output)
-	stderr, err := ff.ExecFFmpeg("-i", vid, "-filter_complex_script", script, "-map", "[v]", "-map", "[a]", output)
-	if err != nil {
-		log.Print(streams.ReadString(stderr))
-		return err
-	}
-	return nil
+	return app.Carve(intervals)
 }
 
 // WriteSelect writes filtergraph using select filter instead of trim.
@@ -117,4 +105,33 @@ func WriteSelect(intervals []*interval.Interval, output string) error {
 	}
 	_, err = fmt.Fprintf(file, "[0:a]aselect='%s',asetpts=N/(FRAME_RATE*TB)[a]\n", strings.Join(selects, "+"))
 	return err
+}
+
+// Carve carves given intervals out of video.
+func (app *App) Carve(intervals []*interval.Interval) error {
+	err := WriteSelect(intervals, app.Script)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Writing output video: %v", app.Output)
+	stderr, err := app.FFmpeg.ExecFFmpeg("-i", app.Input,
+		"-filter_complex_script", app.Script,
+		"-map", "[v]", "-map", "[a]", app.Output)
+	if err != nil {
+		log.Print(streams.ReadString(stderr))
+		return err
+	}
+	return nil
+}
+
+// CarveSeconds carves pairs of seconds out of video.
+// There are even number of seconds.
+func (app *App) CarveSeconds(seconds io.Reader) error {
+	intervals, err := interval.ReadIntervals(seconds)
+	if err != nil {
+		return err
+	}
+
+	return app.Carve(intervals)
 }
