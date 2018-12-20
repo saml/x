@@ -44,8 +44,8 @@ func WriteConcat(vid string, intervals []*interval.Interval, output string) erro
 	return nil
 }
 
-// WriteFilterGraph writes filter graph for carving out video so that only intervals are included.
-func WriteFilterGraph(intervals []*interval.Interval, output string) error {
+// WriteTrim writes filter graph for carving out video so that only intervals are included.
+func WriteTrim(intervals []*interval.Interval, output string) error {
 	log.Printf("Writing filter graph to: %v", output)
 	file, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -85,7 +85,7 @@ func CarveSilence(ff ffmpeg.Runner, vid string, script string, output string) er
 
 	intervals := silencedetect.Invert(silences, duration)
 
-	err = WriteFilterGraph(intervals, script)
+	err = WriteSelect(intervals, script)
 	if err != nil {
 		return err
 	}
@@ -97,4 +97,24 @@ func CarveSilence(ff ffmpeg.Runner, vid string, script string, output string) er
 		return err
 	}
 	return nil
+}
+
+// WriteSelect writes filtergraph using select filter instead of trim.
+func WriteSelect(intervals []*interval.Interval, output string) error {
+	log.Printf("Writing select filter graph to: %v", output)
+	file, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+
+	var selects []string
+	for _, pair := range intervals {
+		selects = append(selects, fmt.Sprintf("between(t,%f,%f)", pair.Start, pair.End))
+	}
+	_, err = fmt.Fprintf(file, "[0:v]select='%s',setpts=N/(FRAME_RATE*TB)[v];\n", strings.Join(selects, "+"))
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(file, "[0:a]aselect='%s',asetpts=N/(FRAME_RATE*TB)[a]\n", strings.Join(selects, "+"))
+	return err
 }
