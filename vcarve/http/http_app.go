@@ -23,14 +23,36 @@ type App struct {
 }
 
 // CarveApp returns carve application from animated thumbnail request.
-func (app *App) CarveApp(param *AnimRequest, original string) *vcarve.App {
+func (app *App) CarveApp(param *AnimRequest) *vcarve.App {
 	fileDir := filepath.Dir(app.Renditions.Hash(param.Video))
 	return &vcarve.App{
 		FFmpeg: app.FFmpeg,
-		Input:  original,
+		Input:  app.Originals.Hash(param.Video),
 		Output: filepath.Join(fileDir, param.Base()),
 		Script: filepath.Join(fileDir, param.Script()),
 	}
+}
+
+func (app *App) animatedThumbnail(carveApp *vcarve.App, param *AnimRequest) error {
+	exists, err := cachefs.Exists(carveApp.Output)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	_, err = Download(app.Originals, param.Video)
+	if err != nil {
+		return err
+	}
+
+	err = cachefs.EnsureDir(carveApp.Output)
+	if err != nil {
+		return err
+	}
+
+	return carveApp.CarveSceneChange(param.MinDuration, param.Probability)
 }
 
 // HandleAnimThumb generates animated thumbnail on the fly.
@@ -43,23 +65,10 @@ func (app *App) HandleAnimThumb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	carveApp := app.CarveApp(param)
+
 	log.Printf("Querying cache with key: %v", param.Video)
-	original, err := Download(app.Originals, param.Video)
-	if err != nil {
-		log.Print(err)
-		jsonresp.New(http.StatusInternalServerError).Err(err).Write(w)
-		return
-	}
-	carveApp := app.CarveApp(param, original)
-
-	err = cachefs.EnsureDir(carveApp.Output)
-	if err != nil {
-		log.Print(err)
-		jsonresp.New(http.StatusInternalServerError).Err(err).Write(w)
-		return
-	}
-
-	err = carveApp.CarveSceneChange(param.MinDuration, param.Probability)
+	err = app.animatedThumbnail(carveApp, param)
 	if err != nil {
 		log.Print(err)
 		jsonresp.New(http.StatusInternalServerError).Err(err).Write(w)
