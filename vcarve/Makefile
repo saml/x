@@ -1,8 +1,8 @@
 .PHONY: clean test all
 
-all: bin/vcarve bin/vcarvesilence bin/vcarvescenechange bin/scenedetect
+all: bin/vcarve bin/vcarvesilence bin/vcarvescenechange bin/scenedetect bin/vcarveserver
 
-bin/%: cmd/%/*.go
+bin/%: cmd/%/*.go *.go ./**/*.go
 	go build -o $@ ./cmd/$(@F)
 
 test:
