@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"html/template"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/saml/x/vcarve/cachefs"
 	"github.com/saml/x/vcarve/ffmpeg"
 	httpapp "github.com/saml/x/vcarve/http"
+	"github.com/saml/x/vcarve/http/jwplayer"
 )
 
 func main() {
@@ -47,12 +49,27 @@ func main() {
 		Addr:       *addr,
 	}
 
-	s := &http.Server{
-		Addr:    app.Addr,
-		Handler: http.HandlerFunc(app.HandleAnimThumb),
-	}
-	log.Printf("Listening to %v", s.Addr)
-	err = s.ListenAndServe()
+	log.Print("Loading templates ...")
+	tmpl := template.Must(template.ParseFiles("index.html"))
+
+	static := http.FileServer(http.Dir("static"))
+	http.Handle("/static", static)
+	http.HandleFunc("/vcarve", app.HandleAnimThumb)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		feed, err := jwplayer.FetchFeed(q.Get("feed"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		err = tmpl.ExecuteTemplate(w, "index.html", feed)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	log.Printf("Listening to %v", app.Addr)
+	err = http.ListenAndServe(app.Addr, nil)
 	if err != nil {
 		log.Fatal().Err(err)
 	}

@@ -9,30 +9,14 @@
     </style>
 </head>
 <body>
-    <div class="anim">
-        <a href="http://content.jwplatform.com/videos/MPGk82EQ-rXcpvLht.mp4">
-            <img width="320" src="http://content.jwplatform.com/thumbs/MPGk82EQ-720.jpg">
-            <video src="http://localhost:8080/?v=http://content.jwplatform.com/videos/MPGk82EQ-GYnwdAIw.mp4" preload="none" loop muted></video>
-        </a>
-    </div>
-    <div class="anim">
-        <a href="http://content.jwplatform.com/videos/N5ngMSOw-rXcpvLht.mp4">
-            <img width="320" src="http://content.jwplatform.com/thumbs/N5ngMSOw-720.jpg">
-            <video src="http://localhost:8080/?v=http://content.jwplatform.com/videos/N5ngMSOw-GYnwdAIw.mp4" preload="none" loop muted></video>
-        </a>
-    </div>
-    <div class="anim">
-        <a href="http://content.jwplatform.com/videos/TCd4hqgq-rXcpvLht.mp4">
-            <img width="320" src="http://content.jwplatform.com/thumbs/TCd4hqgq-720.jpg">
-            <video src="http://localhost:8080/?v=http://content.jwplatform.com/videos/TCd4hqgq-GYnwdAIw.mp4" preload="none" loop muted></video>
-        </a>
-    </div>
-    <div class="anim">
-        <a href="http://content.jwplatform.com/videos/b183SUa5-rXcpvLht.mp4">
-            <img width="320" src="http://content.jwplatform.com/thumbs/b183SUa5-720.jpg">
-            <video src="http://localhost:8080/?v=http://content.jwplatform.com/videos/b183SUa5-GYnwdAIw.mp4" preload="none" loop muted></video>
-        </a>
-    </div>
+    {{range .Playlist}}
+        <div class="anim">
+            <a href="{{ (.Width 720).URL }}">
+                <img width="320" src="{{.Thumbnail}}">
+                <video src="http://localhost:8080/vcarve?v={{(.Width 320).URL}}" preload="none" loop muted></video>
+            </a>
+        </div>
+    {{end}}
     <script>
 Array.from(document.querySelectorAll('.anim')).forEach((anim) => {
     const img = anim.querySelector('img');
