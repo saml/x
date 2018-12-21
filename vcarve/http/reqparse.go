@@ -1,8 +1,10 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 )
 
@@ -50,4 +52,15 @@ func ParseAnimRequest(r *http.Request) (*AnimRequest, error) {
 		Probability: probability,
 		MinDuration: duration,
 	}, nil
+}
+
+// Base is file name of animated thumbnail request.
+func (a *AnimRequest) Base() string {
+	base := filepath.Base(a.Video.Path)
+	return fmt.Sprintf("%s_p%.6f_d%.6f_%s", base, a.Probability, a.MinDuration, filepath.Ext(base))
+}
+
+// Script returns filter script name (not full path).
+func (a *AnimRequest) Script() string {
+	return a.Base() + ".filter.txt"
 }

@@ -9,12 +9,15 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/saml/x/vcarve/cachefs"
+	"github.com/saml/x/vcarve/ffmpeg"
 	httpapp "github.com/saml/x/vcarve/http"
 )
 
 func main() {
 	addr := flag.String("addr", ":8080", "address to bind to")
 	cacheDir := flag.String("cache", "data", "directory to store cache objects")
+	ffmpegPath := flag.String("ffmpeg", "ffmpeg", "path to ffmpeg")
+	ffprobePath := flag.String("ffprobe", "ffprobe", "path to ffprobe")
 	flag.Parse()
 
 	originals := &cachefs.CacheFS{
@@ -35,6 +38,10 @@ func main() {
 	}
 
 	app := &httpapp.App{
+		FFmpeg: &ffmpeg.App{
+			FFmpeg:  *ffmpegPath,
+			FFprobe: *ffprobePath,
+		},
 		Originals:  originals,
 		Renditions: renditions,
 		Addr:       *addr,
