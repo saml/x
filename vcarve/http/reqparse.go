@@ -6,7 +6,52 @@ import (
 	"net/url"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 )
+
+// TimestampRequest is request to only include given timestamps
+type TimestampRequest struct {
+	Video      *url.URL
+	Timestamps []time.Duration // must be even number of elements
+}
+
+// ParseTimestampRequest parses TimestampRequest out of request.
+func ParseTimestampRequest(r *http.Request) (*TimestampRequest, error) {
+	q := r.URL.Query()
+	key, err := url.ParseRequestURI(q.Get("v"))
+	if err != nil {
+		return nil, parseErr("v", err)
+	}
+
+	var timestamps []time.Duration
+	for _, timestamp := range strings.Split(q.Get("t"), ",") {
+		t, err := time.ParseDuration(timestamp)
+		if err != nil {
+			return nil, parseErr("t", err)
+		}
+		timestamps = append(timestamps, t)
+	}
+	return &TimestampRequest{
+		Video:      key,
+		Timestamps: timestamps,
+	}, nil
+}
+
+// Base is file name of timestamp request.
+func (a *TimestampRequest) Base() string {
+	base := filepath.Base(a.Video.Path)
+	var timestamps []string
+	for _, t := range a.Timestamps {
+		timestamps = append(timestamps, strconv.FormatFloat(t.Seconds(), 'f', -1, 64))
+	}
+	return fmt.Sprintf("%s_%s_%s", base, strings.Join(timestamps, "."), filepath.Ext(base))
+}
+
+// Script returns filter script name (not full path).
+func (a *TimestampRequest) Script() string {
+	return a.Base() + ".filter.txt"
+}
 
 // AnimRequest is animated thumbnail generation requeste parameter.
 type AnimRequest struct {

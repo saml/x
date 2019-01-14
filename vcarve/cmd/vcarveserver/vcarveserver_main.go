@@ -55,6 +55,7 @@ func main() {
 	static := http.FileServer(http.Dir("static"))
 	http.Handle("/static", static)
 	http.HandleFunc("/vcarve", app.HandleAnimThumb)
+	http.HandleFunc("/vcarve_manual", app.HandleTimestampThumb)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		feed, err := jwplayer.FetchFeed(q.Get("feed"))
