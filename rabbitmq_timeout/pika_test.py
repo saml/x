@@ -4,6 +4,7 @@ Test case for implementing timeout on pika (RabbitMQ).
 """
 
 import logging
+from typing import List
 
 # import sanic
 # import sanic.response
@@ -44,6 +45,8 @@ class Client:
     params: pika.ConnectionParameters = DEFAULT_CONNECTION_PARAMS
     connection: pika.SelectConnection = None
     channel: pika.channel.Channel = None
+    pending_message_numbers: List[int] = []
+    current_message_number: int = 0
 
     def run(self):
         self.connection = self.connect()
@@ -68,9 +71,8 @@ class Client:
         self.publish()
 
     def on_confirm_delivery(self, method_frame):
-        _log.info('Confirm delivery: %s', method_frame)
-        # If this call is delayed due to server latency,
-        # How do I fail the basic_publish?
+        _log.info('Confirm delivery: %s (pending: %s)', method_frame, self.pending_message_numbers)
+        self.pending_message_numbers.pop()
 
     def on_channel_close(self, channel, reason):
         _log.info('Channel closed: %s (%s)', channel, reason)
@@ -89,12 +91,20 @@ class Client:
         self.connection.ioloop.call_later(DELAY_SECS, self.connection.ioloop.stop)
 
     def publish(self):
-        _log.info('Publishing message')
-        properties = pika.BasicProperties(
-            content_type='application/json',
-            delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE,
-        )
-        self.channel.basic_publish('', 'myqueue', '{}', properties)
+        if self.pending_message_numbers:
+            _log.info('Cannot publish message because there are pending messages: %s', self.pending_message_numbers)
+            # Instead of not publishing, I want to kill pending messages on RabbitMQ server.
+        else:
+            _log.info('Publishing message')
+            properties = pika.BasicProperties(
+                content_type='application/json',
+                delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE,
+            )
+            self.channel.basic_publish('', 'myqueue', '{}', properties)
+            self.current_message_number += 1
+            self.pending_message_numbers.append(self.current_message_number)
+
+        # Just recurse to simulate frequent publishing of messages.
         self.connection.ioloop.call_later(DELAY_SECS, self.publish)
 
 
