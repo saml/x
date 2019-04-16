@@ -15,9 +15,7 @@ toxiproxy is https://github.com/Shopify/toxiproxy
 
 Below connects to toxiproxy and publishes a message every second:
 ```
-python
->>> import pika_test
->>> pika_test.Client().run()
+python pika_test.py
 ```
 
 Once it's publishing messages, set proxy's latency:
