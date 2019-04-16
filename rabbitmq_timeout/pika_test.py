@@ -70,10 +70,6 @@ class Client:
         self.channel.confirm_delivery(self.on_confirm_delivery)
         self.publish()
 
-    def on_confirm_delivery(self, method_frame):
-        _log.info('Confirm delivery: %s (pending: %s)', method_frame, self.pending_message_numbers)
-        self.pending_message_numbers.pop()
-
     def on_channel_close(self, channel, reason):
         _log.info('Channel closed: %s (%s)', channel, reason)
         self.connection.close()
@@ -89,6 +85,10 @@ class Client:
     def on_connection_close(self, connection, reason):
         _log.info('Connection closed: %s (%s)', connection, reason)
         self.connection.ioloop.call_later(DELAY_SECS, self.connection.ioloop.stop)
+
+    def on_confirm_delivery(self, method_frame):
+        _log.info('Confirm delivery: %s (pending: %s)', method_frame, self.pending_message_numbers)
+        self.pending_message_numbers.pop()
 
     def publish(self):
         if self.pending_message_numbers:
