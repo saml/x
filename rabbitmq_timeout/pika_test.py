@@ -90,7 +90,7 @@ class Client:
         _log.info('Confirm delivery: %s (pending: %s)', method_frame, self.pending_message_numbers)
         self.pending_message_numbers.pop()
 
-    def publish(self):
+    def publish(self, timeout=DELAY_SECS, on_timeout_callback=None):
         if self.pending_message_numbers:
             _log.info('Cannot publish message because there are pending messages: %s', self.pending_message_numbers)
             # Instead of not publishing, I want to kill pending messages on RabbitMQ server.
