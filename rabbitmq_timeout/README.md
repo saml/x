@@ -20,4 +20,9 @@ python
 >>> pika_test.Client().run()
 ```
 
-Set throttle
+Once it's publishing messages, set proxy's latency:
+```
+toxiproxy-cli toxic add rabbitmq -t latency -a latency=10000
+```
+
+
