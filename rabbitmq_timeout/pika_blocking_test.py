@@ -2,13 +2,13 @@
 import json
 import time
 import logging
+import socket
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
-from timeout_decorator import timeout, TimeoutError
-
 
 _log = logging.getLogger(__name__)
+
 
 def connect():
     return pika.BlockingConnection(
@@ -25,11 +25,17 @@ def connect():
             retry_delay=0.0,
             stack_timeout=0.2,
             port=5670,
+            tcp_options={
+                # socket.SO_RCVTIMEO: 1.0,
+                # socket.SO_SNDTIMEO: 1.0,
+                'TCP_READTIMEOUT': 1.0,
+                'TCP_WRITETIMEOUT': 1.0,
+            },
         )
     )
 
 
-def _publish(channel: BlockingChannel, message_number: int, mandatory=False):
+def publish(channel: BlockingChannel, message_number: int, mandatory=False):
     _log.info('publishing message %s', message_number)
     properties = pika.BasicProperties(
         content_type='application/json',
@@ -43,13 +49,6 @@ def _publish(channel: BlockingChannel, message_number: int, mandatory=False):
         body=json.dumps({'some': message_number}),
     )
 
-
-def publish(channel: BlockingChannel, message_number: int, timeout_secs: float = 1.0):
-    try:
-        timeout(timeout_secs)(_publish)(channel, message_number)
-    except TimeoutError:
-        _log.exception('Timed out (%s)', timeout_secs)
-        channel.close()
 
 if __name__ == '__main__':
     logging.basicConfig(level='INFO')
