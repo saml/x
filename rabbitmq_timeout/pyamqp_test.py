@@ -15,7 +15,7 @@ def connect():
         userid='guest',
         password='guest',
         connect_timeout=1.0,
-        read_timeout=0.5,
+        # read_timeout=0.5,
         write_timeout=0.5,
         confirm_publish=True
     )
@@ -33,6 +33,7 @@ def publish(channel: amqp.Channel, message_number: int, mandatory=True):
         exchange='',
         routing_key='myqueue',
         mandatory=mandatory,
+        # timeout=2.0,
     )
 
 
