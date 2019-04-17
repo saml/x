@@ -49,11 +49,11 @@ class Client:
     current_message_number: int = 0
 
     def run(self):
-        self.connection = self.connect()
+        self.connect()
         self.connection.ioloop.start()
 
     def connect(self):
-        return pika.SelectConnection(
+        self.connection = pika.SelectConnection(
             self.params,
             on_open_callback=self.on_connection_open,
             on_open_error_callback=self.on_connection_open_error,
@@ -94,6 +94,8 @@ class Client:
         if self.pending_message_numbers:
             _log.info('Cannot publish message because there are pending messages: %s', self.pending_message_numbers)
             # Instead of not publishing, I want to kill pending messages on RabbitMQ server.
+            self.channel.close()
+            self.connection.ioloop.call_later(DELAY_SECS, self.connect)
         else:
             _log.info('Publishing message')
             properties = pika.BasicProperties(
@@ -104,8 +106,8 @@ class Client:
             self.current_message_number += 1
             self.pending_message_numbers.append(self.current_message_number)
 
-        # Just recurse to simulate frequent publishing of messages.
-        self.connection.ioloop.call_later(DELAY_SECS, self.publish)
+            # Just recurse to simulate frequent publishing of messages.
+            self.connection.ioloop.call_later(DELAY_SECS, self.publish)
 
 
 if __name__ == '__main__':

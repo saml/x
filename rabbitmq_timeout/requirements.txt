@@ -1,4 +1,6 @@
 pika==1.0.1
 attrs==19.1.0
 kombu==4.5.0
+timeout-decorator==0.4.1
+amqp==2.4.2
 #sanic==19.3.1
