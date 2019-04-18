@@ -2,10 +2,11 @@
 import json
 import time
 import logging
-import socket
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
+
+from toxiproxy import ToxiProxy
 
 _log = logging.getLogger(__name__)
 
@@ -35,19 +36,37 @@ def connect():
     )
 
 
-def publish(channel: BlockingChannel, message_number: int, mandatory=False):
+def publish(channel: BlockingChannel, message_number: int, mandatory=False, exchange=''):
     _log.info('publishing message %s', message_number)
     properties = pika.BasicProperties(
         content_type='application/json',
         delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE,
     )
     channel.basic_publish(
-        exchange='',
+        exchange=exchange,
         routing_key='myqueue',
         properties=properties,
         mandatory=mandatory,
         body=json.dumps({'some': message_number}),
     )
+
+
+def test():
+    proxy = ToxiProxy()
+    proxy.setup(ignore_error=True)
+
+    c = connect()
+    ch = c.channel()
+    ch.confirm_delivery()
+
+    proxy.add()
+    try:
+        publish(ch, 1)
+    except KeyboardInterrupt:
+        proxy.remove()
+        ch.close()
+    c.close()
+
 
 
 if __name__ == '__main__':
