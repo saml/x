@@ -19,15 +19,22 @@ def connect(port=5434, timeout_secs=2):
     conn = psycopg2.connect(f'dbname=postgres user=postgres password=postgres host=localhost port={port} client_encoding=utf8')
     fileno = conn.fileno()
     _log.info('getting socket from file descriptor: %s', fileno)
-    sock = socket.socket(fileno=fileno, proto=4, family=socket.AF_INET, type=socket.SOCK_STREAM)
-    # libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
-    # for opt in (socket.SO_RCVTIMEO, socket.SO_SNDTIMEO):
-    #     # timeout = struct.pack('ll', int(timeout_secs), 0)
-    #     ret = libc.setsockopt(fileno, socket.SOL_SOCKET, opt, ctypes.c_void_p(timeout_secs), ctypes.c_int(0))
-    #     _log.info('Set timeout (%s) on socket %s returned: %s', opt, fileno, ret)
-    #     if ret != 0:
-    #         _log.error('errono: %s', ctypes.get_errno())
-    #         raise Exception("Wrong usage of setsockopt")
+    # sock = socket.socket(fileno=fileno, proto=4, family=socket.AF_INET, type=socket.SOCK_STREAM)
+    libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
+    libc.__errno_location.restype = ctypes.POINTER(ctypes.c_int)
+
+    for opt in (socket.SO_RCVTIMEO, socket.SO_SNDTIMEO):
+        # timeout = struct.pack('ll', int(timeout_secs), 0)
+        ret = libc.setsockopt(ctypes.c_int(fileno),
+                              ctypes.c_int(socket.SOL_SOCKET),
+                              ctypes.c_int(opt),
+                              ctypes.c_void_p(int(timeout_secs)),
+                              ctypes.c_int(0))
+        _log.info('Set timeout (%s) on socket %s returned: %s', opt, fileno, ret)
+        if ret != 0:
+            errono = libc.__errno_location().contents.value
+            _log.error('errono: %s', errono)
+            raise Exception(f'Wrong usage of setsockopt. errono={errono}')
     # libc.setsockopt()
     # _sock = socket.fromfd(fileno, socket.AF_INET, socket.SOCK_STREAM)
     # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, _sock=_sock)
