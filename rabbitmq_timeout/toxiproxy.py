@@ -54,7 +54,7 @@ class ToxiProxy:
                       )).raise_for_status()
         self.toxic_names.append(toxic_name)
 
-    def add(self, latency_msec=10000, rate_kbps=1):
+    def add(self, latency_msec=20000, rate_kbps=1):
         self.add_latency(latency_msec)
         self.add_bandwidth(rate_kbps)
 

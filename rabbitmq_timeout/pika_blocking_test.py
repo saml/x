@@ -67,15 +67,19 @@ def test():
         ch.close()
     c.close()
 
+def test_no_proxy():
+    proxy = ToxiProxy()
+    proxy.setup(ignore_error=True)
+    proxy.remove()
 
-
-if __name__ == '__main__':
-    logging.basicConfig(level='INFO')
     c = connect()
     ch = c.channel()
     ch.confirm_delivery()
-    i = 0
-    while True:
-        i += 1
-        publish(ch, i)
-        time.sleep(1)
+    publish(ch, 1)
+    ch.close()
+    c.close()
+
+if __name__ == '__main__':
+    logging.basicConfig(level='INFO')
+    test()
+    #test_no_proxy()
