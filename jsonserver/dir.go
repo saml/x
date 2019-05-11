@@ -1,12 +1,11 @@
 package main
 
 import (
-	"path"
 	"strings"
 )
 
-// Split splits path into first segment and the rest.
-func Split(resPath string) (string, string) {
+// SplitSeg splits path into first segment and the rest.
+func SplitSeg(resPath string) (string, string) {
 	seg := strings.Trim(resPath, "/")
 	idx := strings.IndexByte(seg, '/')
 	var rest string
@@ -17,9 +16,21 @@ func Split(resPath string) (string, string) {
 	return seg, rest
 }
 
+// Split splits path into dir and file.
+func Split(resPath string) (string, string) {
+	dir := strings.Trim(resPath, "/")
+	idx := strings.LastIndexByte(dir, '/')
+	var file string
+	if idx >= 0 {
+		file = dir[idx+1:]
+		dir = dir[:idx]
+	}
+	return dir, file
+}
+
 // EnsureDirs creates given directory and all parent directories.
 func EnsureDirs(res Resource, dirPath string) (Resource, error) {
-	seg, rest := Split(dirPath)
+	seg, rest := SplitSeg(dirPath)
 	if seg == "" {
 		return res, nil
 	}
@@ -33,7 +44,7 @@ func EnsureDirs(res Resource, dirPath string) (Resource, error) {
 
 // Add adds a new resource.
 func Add(res Resource, resPath string, data Data) (Resource, error) {
-	dirPath, name := path.Split(resPath)
+	dirPath, name := Split(resPath)
 	dir, err := EnsureDirs(res, dirPath)
 	if err != nil {
 		return nil, err

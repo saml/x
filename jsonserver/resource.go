@@ -16,8 +16,11 @@ type Resource interface {
 	// Update updates part of the child.
 	Update(name string, patch Data) (Resource, error)
 
-	// Read reads the child.
-	Read(name string) (Resource, error)
+	// Read reads data of this Resource
+	Read() Data
+
+	// Child gives the child of the given name.
+	Child(name string) (Resource, error)
 
 	// Del deletes the child.
 	Del(name string) (Resource, error)
@@ -46,8 +49,24 @@ var (
 	ErrNoChange = errors.New("ERR_NOCHANGE")
 )
 
-// Read reads child resource.
-func (res *InMemoryTree) Read(name string) (Resource, error) {
+// NewResource creates new resource without children.
+func NewResource(data Data) *InMemoryTree {
+	if data == nil {
+		data = make(map[string]interface{})
+	}
+	return &InMemoryTree{
+		Data:     data,
+		Children: make(map[string]*InMemoryTree),
+	}
+}
+
+// Read reads data.
+func (res *InMemoryTree) Read() Data {
+	return res.Data
+}
+
+// Child gives child resource.
+func (res *InMemoryTree) Child(name string) (Resource, error) {
 	child, ok := res.Children[name]
 	if !ok {
 		return nil, ErrNotFound
@@ -62,11 +81,9 @@ func (res *InMemoryTree) Add(name string, data Data) (Resource, error) {
 		return child, ErrExists
 	}
 
-	res.Children[name] = &InMemoryTree{
-		Data: data,
-	}
+	res.Children[name] = NewResource(data)
 
-	return res.Read(name)
+	return res.Child(name)
 }
 
 // Del deletes a child.
