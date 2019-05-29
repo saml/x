@@ -1,0 +1,2 @@
+-e "git+file://$PWD/../..@17f7c9e#egg=mylib1&subdirectory=pip_monorepo/lib1"
+
