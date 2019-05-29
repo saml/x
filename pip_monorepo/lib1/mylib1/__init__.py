@@ -4,4 +4,4 @@ _log = logging.getLogger(__name__)
 
 def f():
     _log.info('f')
-    print(1)
+    print(24)
