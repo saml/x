@@ -30,7 +30,7 @@ CONTAINER_XML = '''<?xml version="1.0"?>
 '''
 
 STYLESHEET = '''
-@font-face { font-family: "hangul"; src: url("./NanumBarunGothic.otf"); }
+@font-face { font-family: "hangul"; src: url("NanumBarunGothic.otf"); }
 body { margin: 5%; font-size: medium; font-family: "hangul"; }
 p { line-height: 1.4; }
 ol.toc li { list-style-type: none; padding: 0.5em; }
@@ -65,9 +65,9 @@ def as_book_toc(book_name, chapter_files):
 
 def as_content_opf(uid, title, filenames, language='ko-KR'):
     manifest = '\n'.join(
-        '<item id="{}" href="{}" media-type="application/xhtml+xml" />'.format(x.replace('.', '_'), x) 
+        '<item id="a{}" href="{}" media-type="application/xhtml+xml" />'.format(x.replace('.', '_'), x) 
         for x in filenames)
-    spine = '\n'.join('<itemref idref="{}" />'.format(x.replace('.', '_')) for x in filenames)
+    spine = '\n'.join('<itemref idref="a{}" />'.format(x.replace('.', '_')) for x in filenames)
 
     return '''<?xml version="1.0" encoding="UTF-8"?>
 <package version="2.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="epub-id-1">
@@ -75,14 +75,16 @@ def as_content_opf(uid, title, filenames, language='ko-KR'):
     <dc:identifier id="epub-id-1">{uid}</dc:identifier>
     <dc:date id="epub-date-1">{today}</dc:date>
     <dc:language>{language}</dc:language>
+    <dc:title>The Bible (Woorimal, Korean)</dc:title>
   </metadata>
   <manifest>
+    <item id="NanumBarunGothic" href="NanumBarunGothic.otf" media-type="application/vnd.ms-opentype" />
     <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml" />
     <item id="style" href="stylesheet.css" media-type="text/css" />
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" />
 {manifest}
   </manifest>
-  <spine>
+  <spine toc="ncx">
 {spine}
   </spine>
   <guide>
@@ -129,6 +131,7 @@ if __name__ == '__main__':
 
     uid = uuid.uuid1().urn
     with zipfile.ZipFile(args.out, 'w') as f:
+        f.writestr('mimetype', 'application/epub+zip')
         for book, chapter, text in c.execute('SELECT book,chapter,text FROM chapters'):
             if current_book.title is None:
                 current_book.title = book
@@ -151,7 +154,6 @@ if __name__ == '__main__':
         f.writestr(book_nav, as_book_toc(current_book.title, current_book.chapters))
             
         f.write('NanumBarunGothic.otf')
-        f.writestr('mimetype', 'application/epub+zip')
         f.writestr('META-INF/container.xml', CONTAINER_XML)
         nav_pages = [book.nav_page for book in all_books]
         f.writestr('toc.ncx', as_toc_ncx(uid, args.title, nav_pages))
@@ -162,4 +164,3 @@ if __name__ == '__main__':
         f.writestr('content.opf', as_content_opf(uid, args.title, all_filenames))
         f.writestr('nav.xhtml', as_book_toc(args.title, nav_pages))
         f.writestr('stylesheet.css', STYLESHEET)
-            
