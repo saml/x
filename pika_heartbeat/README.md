@@ -7,7 +7,7 @@ because heartbeat isn't sent to the broker.
 
 ```
 # Start broker
-docker run --rm --publish '5672:5672' --publish '15672:15672' rabbitmq:3.7-management-alpine
+docker run --rm --publish '5672:5672' --publish '15672:15672' --volume $PWD/rabbitmq.json:/etc/rabbitmq/definitions.json rabbitmq:3.7-management-alpine
 
 # Start test
 python pika_heartbeat.py --heartbeat 10

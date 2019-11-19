@@ -1,10 +1,9 @@
 import argparse
 import logging
-import time
 
 import pika
 
-DEFAULT_HEARTBEAT_SECS = 60
+DEFAULT_HEARTBEAT_SECS = 10
 
 
 def connect(
@@ -33,12 +32,24 @@ def main():
     parser.add_argument("--heartbeat", type=int, default=DEFAULT_HEARTBEAT_SECS)
     args = parser.parse_args()
     heartbeat_secs = args.heartbeat
-    sleep_secs = heartbeat_secs * 5  # sleep enough so that broker closes connection
-    conn = connect(heartbeat=args.heartbeat)
-    ch = conn.channel()
-    ch.basic_publish("", "test", "")
-    time.sleep(sleep_secs)
-    ch.basic_publish("", "test", "")  # this is expected to fail
+    consumer = connect(heartbeat=heartbeat_secs)
+    consumer_channel = consumer.channel()
+    producer = connect(
+        heartbeat=heartbeat_secs, virtual_host="foo"
+    )  # Actually connects to different rabbitmq host
+    producer_channel = producer.channel()
+
+    def handle_message(*args, **kwargs):
+        producer_channel.basic_publish("", "test-publish", "")
+
+    try:
+        consumer_channel.basic_consume("test", handle_message, auto_ack=True)
+        consumer_channel.start_consuming()
+    except KeyboardInterrupt:
+        consumer_channel.start_consuming()
+    finally:
+        producer.close()
+        consumer.close()
 
 
 if __name__ == "__main__":
