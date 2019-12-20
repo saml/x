@@ -13,7 +13,7 @@ HEARTBEAT = 2
 
 async def callback(channel, body, envelope, properties):
     _log.info(" [x] Received %s", body)
-    time.sleep((HEARTBEAT + 1) * 3)
+    time.sleep((HEARTBEAT + 1) * 2)
     _log.info(" ack")
     await channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
 
