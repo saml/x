@@ -65,7 +65,9 @@ class Publisher:
                     try:
                         connection.process_data_events()  # This makes connection alive
                         kwargs = self.queue.get(block=True, timeout=1.0)
-                        _log.info("Publishing")
+                        _log.info(
+                            "Publishing %s to %s", kwargs["body"], kwargs["routing_key"]
+                        )
                         channel.basic_publish(**kwargs)
                     except queue.Empty:
                         _log.info("Nothing to publish")
@@ -78,6 +80,7 @@ class Publisher:
                 self._publish_loop()
             except pika.exceptions.AMQPError as err:
                 _log.error("Pika error. Will reconnect", exc_info=err)
+                time.sleep(1.0)
 
 
 def main():
@@ -88,15 +91,10 @@ def main():
     publisher = Publisher(connect)
     publisher.start()
     for x in range(10):
-        _log.info("Sending first message and sleeping")
         publisher.publish(
-            exchange="", routing_key=QUEUE_NAME, body="Hello", mandatory=True,
+            exchange="", routing_key=QUEUE_NAME, body=f"{x} Hello", mandatory=True,
         )
-        time.sleep((HEARTBEAT + 1) * 3)
-        _log.info("Sending second message")
-        publisher.publish(
-            exchange="", routing_key=QUEUE_NAME, body="Hello",
-        )
+        time.sleep((HEARTBEAT + 1) * 2)
     publisher.quit.set()
 
 
