@@ -7,6 +7,10 @@ import os
 from queue import Queue
 
 import pika
+import threading
+import queue
+
+from datetime import datetime
 
 DEFAULT_HEARTBEAT_SECS = 5
 _log = logging.getLogger(__name__)
@@ -28,78 +32,45 @@ def connect(
     return pika.BlockingConnection(parameters=param)
 
 
-class Consumer:
-    def __init__(self, conn):
-        self.conn = conn
-        self.q = None
-        self.worker_thread = None
+def consuming_thread(heartbeat_secs, q):
+    consumer = connect(heartbeat=heartbeat_secs, virtual_host='/')
+    consumer_channel = consumer.channel()
 
-    def stop(self):
-        _log.info("Stopping consumer")
-        if self.q is None:
-            _log.info("Not yet started. Nothing to stop")
-            return
+    def handle_message(*args, **kwargs):
+        q.put('test-publish {}'.format(datetime.now()))
 
-        while not self.q.empty():
-            item = self.q.get()
-            _log.info("Draining work queue: %s", item)
-            self.q.task_done()
-        _log.info("Drained worked queue")
-        self.q.put(None)  # signal worker to break out of loop
+    try:
+        # Note: auto_ack=True can result in lost messages
+        consumer_channel.basic_consume('test', handle_message, auto_ack=True)
+        consumer_channel.start_consuming()
+    except KeyboardInterrupt:
+        consumer_channel.start_consuming()
+    finally:
+        consumer.close()
 
-        if self.worker_thread is not None:
-            _log.info("Joining worker thread")
-            # Let the last work to finish
-            self.worker_thread.join(timeout=100.0)  # timeout in seconds
-        _log.info("Joining work queue")
-        self.q.join()
-        if self.conn is not None:
-            _log.info("Closing connection")
-            self.conn.close()
 
-    def start_consuming(self, queue_name, handler):
-        self.q = Queue()
+def publishing_thread(heartbeat_secs, q):
+    producer = connect(heartbeat=heartbeat_secs, virtual_host='/')
+    producer_channel = producer.channel()
 
-        def worker():
-            while True:
-                item = self.q.get()
-                _log.info("Worker got item: %s", item)
-                if item is None:
-                    _log.info("Got signal to break out of loop")
-                    self.q.task_done()
-                    break
+    running = True
 
-                channel, method, properties, body = item
-                handler(channel, method, properties, body)
-                _log.info("Work is done. Ack: %s", method.delivery_tag)
-                self.conn.add_callback_threadsafe(
-                    functools.partial(
-                        channel.basic_ack, delivery_tag=method.delivery_tag
-                    )
-                )
-                self.q.task_done()
+    while running:
+        producer.process_data_events()
+        try:
+            v = q.get(block=True, timeout=5)
+            print('publishing: {}\n'.format(v))
+            producer_channel.basic_publish('', 'test-two', v)
+        except queue.Empty:
+            print('nothing to publish!\n')
+            pass
 
-        def message_handler(channel, method, properties, body):
-            _log.info("Enqueueing work")
-            self.q.put((channel, method, properties, body))
-
-        _log.info("Starting worker thread")
-        self.worker_thread = threading.Thread(target=worker)
-        self.worker_thread.start()
-        self.worker_thread.join(timeout=0.1)
-
-        _log.info("Starting consumer")
-        with self.conn.channel() as channel:
-            channel.basic_consume(
-                queue=queue_name, on_message_callback=message_handler, auto_ack=False
-            )
-            channel.start_consuming()
+    consumer.close()
 
 
 def main():
     logging.basicConfig(
-        level=os.environ.get("LOG_LEVEL", "info").upper(),
-        format="%(asctime)s %(levelname)s %(threadName)s %(name)s %(message)s",
+        level='INFO', format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -107,21 +78,16 @@ def main():
     parser.add_argument("--heartbeat", type=int, default=DEFAULT_HEARTBEAT_SECS)
     args = parser.parse_args()
     heartbeat_secs = args.heartbeat
-    conn = connect(heartbeat=heartbeat_secs)
-    consumer = Consumer(conn)
 
-    def handle_message(*args, **kwargs):
-        _log.info("Handling a message takes longer than heartbeat")
-        time.sleep(30)
-
-    try:
-        consumer.start_consuming("test", handle_message)
-    finally:
-        try:
-            consumer.stop()
-        except Exception:
-            _log.exception("Bye")
-
+    q = queue.SimpleQueue()
+    consuming_t = threading.Thread(target=consuming_thread, args=(heartbeat_secs, q))
+    publishing_t = threading.Thread(target=publishing_thread, args=(heartbeat_secs, q))
+    consuming_t.start()
+    publishing_t.start()
+    print('Waiting for threads to finish...')
+    consuming_t.join()
+    publishing_t.join()
+    print('Exiting...')
 
 if __name__ == "__main__":
     main()

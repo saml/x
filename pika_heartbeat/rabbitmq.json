@@ -8,7 +8,7 @@
             "tags": "administrator",
         }
     ],
-    "vhosts": [{"name": "foo"}, {"name": "/"}],
+    "vhosts": [{"name": "/"}],
     "permissions": [
         {"user": "guest", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*"},
         {
@@ -21,11 +21,17 @@
     ],
     "topic_permissions": [],
     "parameters": [],
-    "global_parameters": [{"name": "cluster_name", "value": "rabbit@58ded6b5ca20"}],
     "policies": [],
     "queues": [
         {
             "name": "test",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {},
+        },
+        {
+            "name": "test-two",
             "vhost": "/",
             "durable": true,
             "auto_delete": false,
