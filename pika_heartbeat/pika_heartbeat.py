@@ -1,12 +1,19 @@
 import argparse
 import logging
+import threading
+import time
+import functools
+import os
+from queue import Queue
+
 import pika
 import threading
 import queue
 
 from datetime import datetime
 
-DEFAULT_HEARTBEAT_SECS = 10
+DEFAULT_HEARTBEAT_SECS = 5
+_log = logging.getLogger(__name__)
 
 
 def connect(
